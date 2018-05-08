@@ -4,7 +4,7 @@ class Board {
     this.turn = "black";
     this.width = width;
     this.height = height;
-    this.prisoners = {"black": 0, "white": 0};
+    this.prisonersTakenBy = {"black": 0, "white": 0};
     this.grid = [];
     for (let row = 0; row < height; row++) {
       this.grid.push(Array(width).fill(null));
@@ -72,13 +72,13 @@ class Board {
         console.log("neighbor =", neighborX, neighborY);
         for (let dead of this.getDeadGroup(neighborX, neighborY)) {
           this.grid[dead.x][dead.y] = null;
-          this.prisoners[this.turn]++;
+          this.prisonersTakenBy[this.turn]++;
         }
       }
       let nextTurn = (this.turn == "black") ? "white" : "black";
       for (let dead of this.getDeadGroup(x, y)) {
         this.grid[dead.x][dead.y] = null;
-        this.prisoners[nextTurn]++;
+        this.prisonersTakenBy[nextTurn]++;
       }
       this.turn = nextTurn;
     }
@@ -174,10 +174,10 @@ class View {
     }
 
     // Display prisoner count.
-    let blackPrisonerSpan = document.getElementById("black_prisoners");
-    blackPrisonerSpan.innerHTML = this.board.prisoners["black"];
-    let whitePrisonerSpan = document.getElementById("white_prisoners");
-    whitePrisonerSpan.innerHTML = this.board.prisoners["white"];
+    let blackScoreSpan = document.getElementById("prisoners_taken_by_black");
+    blackScoreSpan.innerHTML = this.board.prisonersTakenBy["black"];
+    let whiteScoreSpan = document.getElementById("prisoners_taken_by_white");
+    whiteScoreSpan.innerHTML = this.board.prisonersTakenBy["white"];
   }
 
   onMouseClickCallback(mouseEvent) {
