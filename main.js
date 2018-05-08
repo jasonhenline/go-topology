@@ -4,6 +4,7 @@ class Board {
     this.turn = "black";
     this.width = width;
     this.height = height;
+    this.prisoners = {"black": 0, "white": 0};
     this.grid = [];
     for (let row = 0; row < height; row++) {
       this.grid.push(Array(width).fill(null));
@@ -65,19 +66,21 @@ class Board {
   play(x, y) {
     if (!this.grid[x][y]) {
       this.grid[x][y] = this.turn
-      // TODO: Keep score while removing dead stones.
       for (let direction of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         let neighborX = (x + direction[0] + this.width)%this.width;
         let neighborY = (y + direction[1] + this.height)%this.height;
         console.log("neighbor =", neighborX, neighborY);
         for (let dead of this.getDeadGroup(neighborX, neighborY)) {
           this.grid[dead.x][dead.y] = null;
+          this.prisoners[this.turn]++;
         }
       }
+      let nextTurn = (this.turn == "black") ? "white" : "black";
       for (let dead of this.getDeadGroup(x, y)) {
         this.grid[dead.x][dead.y] = null;
+        this.prisoners[nextTurn]++;
       }
-      this.turn = (this.turn === "black") ? "white" : "black";
+      this.turn = nextTurn;
     }
   }
 }
@@ -169,6 +172,12 @@ class View {
         }
       }
     }
+
+    // Display prisoner count.
+    let blackPrisonerSpan = document.getElementById("black_prisoners");
+    blackPrisonerSpan.innerHTML = this.board.prisoners["black"];
+    let whitePrisonerSpan = document.getElementById("white_prisoners");
+    whitePrisonerSpan.innerHTML = this.board.prisoners["white"];
   }
 
   onMouseClickCallback(mouseEvent) {
