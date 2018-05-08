@@ -6,11 +6,7 @@ class Board {
     this.height = height;
     this.grid = [];
     for (let row = 0; row < height; row++) {
-      let rowArray = []
-      for (let col = 0; col < width; col++) {
-        rowArray.push(null);
-      }
-      this.grid.push(rowArray);
+      this.grid.push(Array(width).fill(null));
     }
   }
 
