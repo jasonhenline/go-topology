@@ -1,105 +1,172 @@
-function drawGrid(context, topLeftX, topLeftY, sideLength, dimension) {
-  context.beginPath();
-
-  for (let row = 0; row < dimension; row++) {
-    y = topLeftY + (row + 1)*sideLength;
-    context.moveTo(topLeftX + sideLength/2, y);
-    context.lineTo(topLeftX + sideLength/2 + sideLength*dimension, y);
+class Board {
+  // Makes an empty board.
+  constructor(width, height) {
+    this.turn = "black";
+    this.width = width;
+    this.height = height;
+    this.grid = [];
+    for (let row = 0; row < height; row++) {
+      let rowArray = []
+      for (let col = 0; col < width; col++) {
+        rowArray.push(null);
+      }
+      this.grid.push(rowArray);
+    }
   }
 
-  for (let col = 0; col < dimension; col++) {
-    x = topLeftX + (col + 1)*sideLength;
-    context.moveTo(x, topLeftY + sideLength/2);
-    context.lineTo(x, topLeftY + sideLength/2 + sideLength*dimension);
+  // Play a stone at the given location.
+  //
+  // If the move is illegal, doesn't update this.turn.
+  play(x, y) {
+    // TODO(mikewallstedt): Do a real implementation.
+
+    if (!this.grid[x][y]) {
+      this.grid[x][y] = this.turn
+      this.turn = (this.turn === "black") ? "white" : "black";
+    }
+  }
+}
+
+class View {
+  constructor(canvasContext, board, sideLength) {
+    this.context = canvasContext;
+    this.board = board;
+    this.sideLength = sideLength;
   }
 
-  context.stroke();
-}
+  drawBoard() {
 
-function drawBoard(context, dimension, sideLength, padding) {
-  context.fillStyle = "white";
-  context.fillRect(0, 0, 1000, 1000);
+    let boardPixelWidth = this.sideLength*this.board.width;
+    let boardPixelHeight = this.sideLength*this.board.height;
 
-  context.fillStyle = "#ffffcc";
-  context.fillRect(
-    padding + sideLength/2,
-    padding + sideLength/2,
-    3*sideLength*dimension,
-    3*sideLength*dimension);
+    // Blank out the whole canvas.
+    this.context.fillStyle = "white";
+    this.context.fillRect(0, 0, 1000, 1000);
 
-  context.fillStyle = "#ffcc00";
-  context.fillRect(
-    padding + sideLength/2 + dimension*sideLength,
-    padding + sideLength/2 + dimension *sideLength,
-    sideLength*dimension,
-    sideLength*dimension);
+    // Outer dim rectangle
+    this.context.fillStyle = "#ffffcc";
+    this.context.fillRect(0, 0, 3*boardPixelWidth, 3*boardPixelHeight);
 
-  context.strokeStyle = "gray";
-  drawGrid(context, padding, padding, sideLength, dimension);
-  drawGrid(
-    context, padding + sideLength*dimension, padding, sideLength, dimension);
-  drawGrid(
-    context, padding, padding + sideLength*dimension, sideLength, dimension);
-  drawGrid(
-    context, padding + 2*sideLength*dimension, padding, sideLength, dimension);
-  drawGrid(
-    context, padding, padding + 2*sideLength*dimension, sideLength, dimension);
-  drawGrid(
-    context,
-    padding + 2*sideLength*dimension,
-    padding + sideLength*dimension,
-    sideLength,
-    dimension);
-  drawGrid(
-    context,
-    padding + sideLength*dimension,
-    padding + 2*sideLength*dimension,
-    sideLength,
-    dimension);
-  drawGrid(
-    context,
-    padding + 2*sideLength*dimension,
-    padding + 2*sideLength*dimension,
-    sideLength,
-    dimension);
+    // Inner bright rectangle
+    this.context.fillStyle = "#ffcc00";
+    this.context.fillRect(
+      boardPixelWidth,
+      boardPixelHeight,
+      boardPixelWidth,
+      boardPixelHeight);
 
-  context.strokeStyle = "black";
-  drawGrid(
-    context,
-    padding + sideLength*dimension,
-    padding + sideLength*dimension,
-    sideLength,
-    dimension);
-}
+    // Greyed out lines.
+    this.context.beginPath();
 
-function getCanvasOnMouseMoveFunction(context, dimension, sideLength, padding) {
-  return function(mouseEvent) {
-    drawBoard(context, dimension, sideLength, padding);
-    let offset = padding + sideLength/2 + sideLength*dimension
-    let gridOffsetX = (mouseEvent.offsetX - offset)/sideLength;
-    let gridOffsetY = (mouseEvent.offsetY - offset)/sideLength;
+    this.context.strokeStyle = "gray";
+
+    for (let row = 0; row < 3*this.board.height; row++) {
+      let y = this.sideLength/2 + row*this.sideLength;
+      this.context.moveTo(0, y);
+      this.context.lineTo(3*boardPixelWidth, y);
+    }
+
+    for (let col = 0; col < 3*this.board.width; col++) {
+      let x = this.sideLength/2 + col*this.sideLength;
+      this.context.moveTo(x, 0);
+      this.context.lineTo(x, 3*boardPixelHeight);
+    }
+
+    this.context.stroke();
+
+    // Black lines.
+    this.context.beginPath();
+
+    this.context.strokeStyle = "black";
+
+    for (let row = 0; row < this.board.height; row++) {
+      let y = boardPixelHeight + this.sideLength/2 + row*this.sideLength;
+      this.context.moveTo(boardPixelWidth + 1, y);
+      this.context.lineTo(2*boardPixelWidth, y);
+    }
+
+    for (let col = 0; col < this.board.width; col++) {
+      let x = boardPixelWidth + this.sideLength/2 + col*this.sideLength;
+      this.context.moveTo(x, boardPixelHeight + 1);
+      this.context.lineTo(x, 2*boardPixelHeight);
+    }
+
+    this.context.stroke();
+
+    // Stones.
+    let stoneRadius = 0.5*this.sideLength;
+    for (let y = 0; y < this.board.height; y++) {
+      for (let x = 0; x < this.board.width; x++) {
+        let color = this.board.grid[x][y];
+        if (color) {
+          for (let row = 0; row < 3; ++row) {
+            for (let col = 0; col < 3; ++col) {
+              let centerX = (x + 0.5)*this.sideLength + row*boardPixelHeight;
+              let centerY = (y + 0.5)*this.sideLength + col*boardPixelWidth;
+              this.context.beginPath();
+              this.context.fillStyle = color;
+              this.context.strokeStyle = "black";
+              this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
+              this.context.fill();
+              this.context.stroke();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  onMouseClickCallback(mouseEvent) {
+    let boardPixelWidth = this.sideLength*this.board.width;
+    let boardPixelHeight = this.sideLength*this.board.height;
+
+    let gridOffsetX = (
+      Math.floor((mouseEvent.offsetX - boardPixelWidth)/this.sideLength));
+    let gridOffsetY = (
+      Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
+
+    let stoneRadius = 0.5*this.sideLength;
+
     if (
-      gridOffsetX > 0 && gridOffsetX < dimension &&
-      gridOffsetY > 0 && gridOffsetY < dimension) {
-      let radius = 0.5*sideLength;
+      gridOffsetX >= 0 && gridOffsetX < this.board.width &&
+      gridOffsetY >= 0 && gridOffsetY < this.board.height &&
+      !this.board.grid[gridOffsetX][gridOffsetY]
+    ) {
+      this.board.play(gridOffsetX, gridOffsetY);
+    }
+    this.drawBoard();
+  }
 
-      console.log(gridOffsetX, gridOffsetY);
+  onMouseMoveCallback(mouseEvent) {
+    this.drawBoard();
+
+    let boardPixelWidth = this.sideLength*this.board.width;
+    let boardPixelHeight = this.sideLength*this.board.height;
+
+    let gridOffsetX = (
+      Math.floor((mouseEvent.offsetX - boardPixelWidth)/this.sideLength));
+    let gridOffsetY = (
+      Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
+
+    let stoneRadius = 0.5*this.sideLength;
+
+    if (
+      gridOffsetX >= 0 && gridOffsetX < this.board.width &&
+      gridOffsetY >= 0 && gridOffsetY < this.board.height &&
+      !this.board.grid[gridOffsetX][gridOffsetY]
+    ) {
       for (let row = 0; row < 3; ++row) {
         for (let col = 0; col < 3; ++col) {
           let centerX = (
-            Math.floor(gridOffsetX)*sideLength +
-            sideLength +
-            padding +
-            col*sideLength*dimension);
+            (gridOffsetX + 0.5)*this.sideLength + row*boardPixelHeight);
           let centerY = (
-            Math.floor(gridOffsetY)*sideLength +
-            sideLength +
-            padding +
-            row*sideLength*dimension);
-          context.beginPath();
-          context.fillStyle = "black";
-          context.arc(centerX, centerY, radius, 0, 2*Math.PI);
-          context.fill();
+            (gridOffsetY + 0.5)*this.sideLength + col*boardPixelWidth);
+          this.context.beginPath();
+          this.context.fillStyle = this.board.turn;
+          this.context.strokeStyle = "black";
+          this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
+          this.context.fill();
+          this.context.stroke();
         }
       }
     }
@@ -110,14 +177,13 @@ window.onload = function() {
   let canvas = document.getElementById("play_area");
   let context = canvas.getContext("2d");
 
-  const padding = 10;
-  const sideLength = 20;
-  const dimension = 13;
+  let board = new Board(13, 13);
+  let view = new View(context, board, 20);
 
-  drawBoard(context, dimension, sideLength, padding);
-
+  view.drawBoard();
   canvas.addEventListener(
-    "mousemove",
-    getCanvasOnMouseMoveFunction(context, dimension, sideLength, padding));
+    "mousemove", (mouseEvent) => view.onMouseMoveCallback(mouseEvent));
+  canvas.addEventListener(
+    "click", (mouseEvent) => view.onMouseClickCallback(mouseEvent));
 }
 
