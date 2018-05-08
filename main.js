@@ -10,14 +10,73 @@ class Board {
     }
   }
 
+  // Get an array of dead stones in the group of this stone.
+  //
+  // Returns an empty array if no stones are dead.
+  getDeadGroup(x, y) {
+    console.log("called getDeadGroup");
+    const allDirections = [
+      {x: -1, y: 0}, {x: 1, y: 0}, {x: 0, y: -1}, {x: 0, y: 1}];
+
+    let color = this.grid[x][y];
+    if (!color) {
+      return [];
+    }
+
+    let seen = [{x, y}];
+    let toCheck = [{position: {x, y}, directions: allDirections.slice()}];
+
+    while (toCheck.length > 0) {
+      console.log("seen =", seen);
+      console.log("toCheck =", toCheck);
+      let current = toCheck.pop();
+      console.log("current =", current);
+      x = current.position.x;
+      y = current.position.y;
+      let direction = current.directions.pop();
+      let next = {
+        x: (x + direction.x + this.width)%this.width,
+        y: (y + direction.y + this.height)%this.height
+      };
+      console.log("next =", next);
+      let nextColor = this.grid[next.x][next.y];
+      if (!nextColor) {
+        // Found a liberty, no stones have to die.
+        return [];
+      } else if (nextColor === color) {
+        if (seen.findIndex(({x, y}) => x === next.x && y === next.y) === -1) {
+          seen.push({x: next.x, y: next.y});
+          toCheck.push({
+            position: {x: next.x, y: next.y},
+            directions: allDirections.slice()
+          });
+        }
+      }
+      if (current.directions.length > 0) {
+        toCheck.push(current);
+      }
+    }
+    return seen;
+  }
+
   // Play a stone at the given location.
   //
   // If the move is illegal, doesn't update this.turn.
   play(x, y) {
-    // TODO(mikewallstedt): Do a real implementation.
-
     if (!this.grid[x][y]) {
       this.grid[x][y] = this.turn
+      // TODO: Keep score while removing dead stones.
+      for (let direction of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        let neighborX = (x + direction[0] + this.width)%this.width;
+        let neighborY = (y + direction[1] + this.height)%this.height;
+        console.log("neighbor =", neighborX, neighborY);
+        for (let dead of this.getDeadGroup(neighborX, neighborY)) {
+          this.grid[dead.x][dead.y] = null;
+        }
+      }
+      for (let dead of this.getDeadGroup(x, y)) {
+        this.grid[dead.x][dead.y] = null;
+      }
       this.turn = (this.turn === "black") ? "white" : "black";
     }
   }
