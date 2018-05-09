@@ -3,18 +3,32 @@
 class Board {
   // Makes an empty board.
   constructor(width, height) {
-    this.turn = "black";
     this.width = width;
     this.height = height;
-    this.prisonersTakenBy = {black: 0, white: 0};
-    this.grid = [];
+
+    // The state saved for undo.
+    this.state = {
+      turn: "black",
+      prisonersTakenBy: {black: 0, white: 0},
+      grid: [],
+      isLegalMove: [],
+      pastGrids: []
+    };
+
     for (let row = 0; row < height; row++) {
-      this.grid.push(Array(width).fill(null));
+      this.state.grid.push(Array(width).fill(null));
     }
-    this.pastGrids = new Set([JSON.stringify(this.grid)]);
-    this.isLegalMove = [];
     for (let row = 0; row < height; row++) {
-      this.isLegalMove.push(Array(width).fill(true));
+      this.state.isLegalMove.push(Array(width).fill(true));
+    }
+    this.state.pastGrids.push(JSON.stringify(this.state.grid));
+    this.pastStates = [JSON.stringify(this.state)];
+  }
+
+  undo() {
+    if (this.pastStates.length > 1) {
+      this.pastStates.pop();
+      this.state = JSON.parse(this.pastStates[this.pastStates.length - 1]);
     }
   }
 
@@ -25,12 +39,12 @@ class Board {
     const allDirections = [
       {x: -1, y: 0}, {x: 1, y: 0}, {x: 0, y: -1}, {x: 0, y: 1}];
 
-    const color = this.grid[x][y];
+    const color = this.state.grid[x][y];
     if (!color) {
       return [];
     }
 
-    const seen = [{x, y}];
+    const seen = [JSON.stringify({x, y})];
     const toCheck = [{position: {x, y}, directions: allDirections.slice()}];
 
     while (toCheck.length > 0) {
@@ -42,14 +56,13 @@ class Board {
         x: (x + direction.x + this.width)%this.width,
         y: (y + direction.y + this.height)%this.height
       };
-      const nextColor = this.grid[next.x][next.y];
+      const nextColor = this.state.grid[next.x][next.y];
       if (!nextColor) {
         // Found a liberty, no stones have to die.
         return [];
       } else if (nextColor === color) {
-        const isNext = ({x, y}) => x === next.x && y === next.y;
-        if (seen.findIndex(isNext) === -1) {
-          seen.push({x: next.x, y: next.y});
+        if (!seen.includes(JSON.stringify(next))) {
+          seen.push(JSON.stringify({x: next.x, y: next.y}));
           toCheck.push({
             position: {x: next.x, y: next.y},
             directions: allDirections.slice()
@@ -60,23 +73,25 @@ class Board {
         toCheck.push(current);
       }
     }
-    return seen;
+    return seen.map(JSON.parse);
   }
 
   populateLegalMoves() {
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
-        if (this.grid[x][y]) {
-          this.isLegalMove[x][y] = false;
+        if (this.state.grid[x][y]) {
+          this.state.isLegalMove[x][y] = false;
         } else {
           const copyBoard = new Board(this.width, this.height);
-          copyBoard.turn = this.turn;
-          copyBoard.grid = this.grid.map((row) => row.slice());
+          copyBoard.state.turn = this.state.turn;
+          copyBoard.state.grid = this.state.grid.map((row) => row.slice());
           copyBoard.play(x, y, false);
-          if (this.pastGrids.has(JSON.stringify(copyBoard.grid))) {
-            this.isLegalMove[x][y] = false;
+          if (
+            this.state.pastGrids.includes(
+              JSON.stringify(copyBoard.state.grid))) {
+            this.state.isLegalMove[x][y] = false;
           } else {
-            this.isLegalMove[x][y] = true;
+            this.state.isLegalMove[x][y] = true;
           }
         }
       }
@@ -87,25 +102,26 @@ class Board {
   //
   // If the move is illegal, doesn't update this.turn.
   play(x, y, callPopulateLegalMoves = true) {
-    if (this.isLegalMove[x][y]) {
-      this.grid[x][y] = this.turn;
+    if (this.state.isLegalMove[x][y]) {
+      this.state.grid[x][y] = this.state.turn;
       for (let direction of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         const neighborX = (x + direction[0] + this.width)%this.width;
         const neighborY = (y + direction[1] + this.height)%this.height;
         for (let dead of this.getDeadGroup(neighborX, neighborY)) {
-          this.grid[dead.x][dead.y] = null;
-          this.prisonersTakenBy[this.turn]++;
+          this.state.grid[dead.x][dead.y] = null;
+          this.state.prisonersTakenBy[this.state.turn]++;
         }
       }
-      const nextTurn = (this.turn == "black") ? "white" : "black";
+      const nextTurn = (this.state.turn == "black") ? "white" : "black";
       for (let dead of this.getDeadGroup(x, y)) {
-        this.grid[dead.x][dead.y] = null;
-        this.prisonersTakenBy[nextTurn]++;
+        this.state.grid[dead.x][dead.y] = null;
+        this.state.prisonersTakenBy[nextTurn]++;
       }
-      this.turn = nextTurn;
-      this.pastGrids.add(JSON.stringify(this.grid));
+      this.state.turn = nextTurn;
+      this.state.pastGrids.push(JSON.stringify(this.state.grid));
       if (callPopulateLegalMoves) {
         this.populateLegalMoves();
+        this.pastStates.push(JSON.stringify(this.state));
       }
     }
   }
@@ -205,7 +221,7 @@ class View {
     // Stones.
     for (let y = 0; y < this.board.height; y++) {
       for (let x = 0; x < this.board.width; x++) {
-        const color = this.board.grid[x][y];
+        const color = this.board.state.grid[x][y];
         if (color) {
           this.drawStone(x, y, color);
         }
@@ -214,12 +230,12 @@ class View {
 
     // Display prisoner count.
     const blackScoreSpan = document.getElementById("prisoners_taken_by_black");
-    blackScoreSpan.innerHTML = this.board.prisonersTakenBy.black;
+    blackScoreSpan.innerHTML = this.board.state.prisonersTakenBy.black;
     const whiteScoreSpan = document.getElementById("prisoners_taken_by_white");
-    whiteScoreSpan.innerHTML = this.board.prisonersTakenBy.white;
+    whiteScoreSpan.innerHTML = this.board.state.prisonersTakenBy.white;
   }
 
-  onMouseClickCallback(mouseEvent) {
+  onCanvasMouseClickCallback(mouseEvent) {
     const boardPixelWidth = this.sideLength*this.board.width;
     const boardPixelHeight = this.sideLength*this.board.height;
 
@@ -231,14 +247,14 @@ class View {
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
       gridOffsetY >= 0 && gridOffsetY < this.board.height &&
-      !this.board.grid[gridOffsetX][gridOffsetY]
+      this.board.state.isLegalMove[gridOffsetX][gridOffsetY]
     ) {
       this.board.play(gridOffsetX, gridOffsetY);
     }
     this.drawBoard();
   }
 
-  onMouseMoveCallback(mouseEvent) {
+  onCanvasMouseMoveCallback(mouseEvent) {
     this.drawBoard();
 
     const boardPixelWidth = this.sideLength*this.board.width;
@@ -252,10 +268,15 @@ class View {
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
       gridOffsetY >= 0 && gridOffsetY < this.board.height &&
-      this.board.isLegalMove[gridOffsetX][gridOffsetY]
+      this.board.state.isLegalMove[gridOffsetX][gridOffsetY]
     ) {
-      this.drawStone(gridOffsetX, gridOffsetY, this.board.turn);
+      this.drawStone(gridOffsetX, gridOffsetY, this.board.state.turn);
     }
+  }
+
+  onUndoMouseClickCallback(mouseEvent) {
+    this.board.undo();
+    this.drawBoard();
   }
 }
 
@@ -268,8 +289,12 @@ window.onload = function() {
 
   view.drawBoard();
   canvas.addEventListener(
-    "mousemove", (mouseEvent) => view.onMouseMoveCallback(mouseEvent));
+    "mousemove", (mouseEvent) => view.onCanvasMouseMoveCallback(mouseEvent));
   canvas.addEventListener(
-    "click", (mouseEvent) => view.onMouseClickCallback(mouseEvent));
+    "click", (mouseEvent) => view.onCanvasMouseClickCallback(mouseEvent));
+
+  const undoButton = document.getElementById("undo_button");
+  undoButton.addEventListener(
+    "click", (mouseEvent) => view.onUndoMouseClickCallback(mouseEvent));
 };
 
