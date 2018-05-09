@@ -37,7 +37,7 @@ class Board {
   // Returns an empty array if no stones are dead.
   getDeadGroup(x, y) {
     const allDirections = [
-      {x: -1, y: 0}, {x: 1, y: 0}, {x: 0, y: -1}, {x: 0, y: 1}];
+      {dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
 
     const color = this.state.grid[x][y];
     if (!color) {
@@ -51,10 +51,10 @@ class Board {
       const current = toCheck.pop();
       x = current.position.x;
       y = current.position.y;
-      const direction = current.directions.pop();
+      const {dx, dy} = current.directions.pop();
       const next = {
-        x: (x + direction.x + this.width)%this.width,
-        y: (y + direction.y + this.height)%this.height
+        x: (x + dx + this.width)%this.width,
+        y: (y + dy + this.height)%this.height
       };
       const nextColor = this.state.grid[next.x][next.y];
       if (!nextColor) {
@@ -132,9 +132,14 @@ class View {
     this.context = canvasContext;
     this.board = board;
     this.sideLength = sideLength;
+    this.verticalOffset = 0;
+    this.horizontalOffset = 0;
   }
 
   drawStone(x, y, color) {
+    x = (x + this.horizontalOffset)%this.board.width;
+    y = (y + this.verticalOffset)%this.board.height;
+
     const stoneRadius = 0.5*this.sideLength;
     const boardPixelWidth = this.sideLength*this.board.width;
     const boardPixelHeight = this.sideLength*this.board.height;
@@ -244,12 +249,19 @@ class View {
     const gridOffsetY = (
       Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
 
+    const x = (
+      (gridOffsetX - this.horizontalOffset + this.board.width)%
+      this.board.width);
+    const y = (
+      (gridOffsetY - this.verticalOffset + this.board.height)%
+      this.board.height);
+
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
       gridOffsetY >= 0 && gridOffsetY < this.board.height &&
-      this.board.state.isLegalMove[gridOffsetX][gridOffsetY]
+      this.board.state.isLegalMove[x][y]
     ) {
-      this.board.play(gridOffsetX, gridOffsetY);
+      this.board.play(x, y);
     }
     this.drawBoard();
   }
@@ -265,18 +277,44 @@ class View {
     const gridOffsetY = (
       Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
 
+    const x = (
+      (gridOffsetX - this.horizontalOffset + this.board.width)%
+      this.board.width);
+    const y = (
+      (gridOffsetY - this.verticalOffset + this.board.height)%
+      this.board.height);
+
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
       gridOffsetY >= 0 && gridOffsetY < this.board.height &&
-      this.board.state.isLegalMove[gridOffsetX][gridOffsetY]
+      this.board.state.isLegalMove[x][y]
     ) {
-      this.drawStone(gridOffsetX, gridOffsetY, this.board.state.turn);
+      this.drawStone(x, y, this.board.state.turn);
     }
   }
 
   onUndoMouseClickCallback(mouseEvent) {
     this.board.undo();
     this.drawBoard();
+  }
+
+  onKeyDownCallback(keyboardEvent) {
+    const directions = new Map([
+      ["ArrowLeft", {dx: -1, dy: 0}],
+      ["ArrowRight", {dx: 1, dy: 0}],
+      ["ArrowUp", {dx: 0, dy: -1}],
+      ["ArrowDown", {dx: 0, dy: 1}]
+    ]);
+
+    if (directions.has(keyboardEvent.key)) {
+      const {dx, dy} = directions.get(keyboardEvent.key);
+      this.horizontalOffset = (
+        (this.horizontalOffset + this.board.width + dx)%this.board.width);
+      this.verticalOffset = (
+        (this.verticalOffset + this.board.height + dy)%this.board.height);
+      this.drawBoard();
+      keyboardEvent.preventDefault();
+    }
   }
 }
 
@@ -296,5 +334,8 @@ window.onload = function() {
   const undoButton = document.getElementById("undo_button");
   undoButton.addEventListener(
     "click", (mouseEvent) => view.onUndoMouseClickCallback(mouseEvent));
+
+  window.addEventListener(
+    "keydown", (keyboardEvent) => view.onKeyDownCallback(keyboardEvent));
 };
 
