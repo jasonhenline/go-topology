@@ -11,6 +11,11 @@ class Board {
     for (let row = 0; row < height; row++) {
       this.grid.push(Array(width).fill(null));
     }
+    this.pastGrids = new Set([JSON.stringify(this.grid)]);
+    this.isLegalMove = [];
+    for (let row = 0; row < height; row++) {
+      this.isLegalMove.push(Array(width).fill(true));
+    }
   }
 
   // Get an array of dead stones in the group of this stone.
@@ -58,11 +63,31 @@ class Board {
     return seen;
   }
 
+  populateLegalMoves() {
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.grid[x][y]) {
+          this.isLegalMove[x][y] = false;
+        } else {
+          const copyBoard = new Board(this.width, this.height);
+          copyBoard.turn = this.turn;
+          copyBoard.grid = this.grid.map((row) => row.slice());
+          copyBoard.play(x, y, false);
+          if (this.pastGrids.has(JSON.stringify(copyBoard.grid))) {
+            this.isLegalMove[x][y] = false;
+          } else {
+            this.isLegalMove[x][y] = true;
+          }
+        }
+      }
+    }
+  }
+
   // Play a stone at the given location.
   //
   // If the move is illegal, doesn't update this.turn.
-  play(x, y) {
-    if (!this.grid[x][y]) {
+  play(x, y, callPopulateLegalMoves = true) {
+    if (this.isLegalMove[x][y]) {
       this.grid[x][y] = this.turn;
       for (let direction of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         const neighborX = (x + direction[0] + this.width)%this.width;
@@ -78,6 +103,10 @@ class Board {
         this.prisonersTakenBy[nextTurn]++;
       }
       this.turn = nextTurn;
+      this.pastGrids.add(JSON.stringify(this.grid));
+      if (callPopulateLegalMoves) {
+        this.populateLegalMoves();
+      }
     }
   }
 }
@@ -223,7 +252,7 @@ class View {
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
       gridOffsetY >= 0 && gridOffsetY < this.board.height &&
-      !this.board.grid[gridOffsetX][gridOffsetY]
+      this.board.isLegalMove[gridOffsetX][gridOffsetY]
     ) {
       this.drawStone(gridOffsetX, gridOffsetY, this.board.turn);
     }
