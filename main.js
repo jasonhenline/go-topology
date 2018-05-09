@@ -92,8 +92,33 @@ class View {
     this.sideLength = sideLength;
   }
 
-  drawBoard() {
+  drawStone(x, y, color) {
+    let stoneRadius = 0.5*this.sideLength;
+    let boardPixelWidth = this.sideLength*this.board.width;
+    let boardPixelHeight = this.sideLength*this.board.height;
+    let grayStroke = "#666666";
+    let grayColor = color === "black" ? grayStroke : "#f9f9f9";
 
+    for (let row = 0; row < 3; ++row) {
+      for (let col = 0; col < 3; ++col) {
+        let centerX = (x + 0.5)*this.sideLength + row*boardPixelHeight;
+        let centerY = (y + 0.5)*this.sideLength + col*boardPixelWidth;
+        this.context.beginPath();
+        if (row === 1 && col === 1) {
+          this.context.fillStyle = color;
+          this.context.strokeStyle = "black";
+        } else {
+          this.context.fillStyle = grayColor;
+          this.context.strokeStyle = grayStroke;
+        }
+        this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
+        this.context.fill();
+        this.context.stroke();
+      }
+    }
+  }
+
+  drawBoard() {
     let boardPixelWidth = this.sideLength*this.board.width;
     let boardPixelHeight = this.sideLength*this.board.height;
 
@@ -152,23 +177,11 @@ class View {
     this.context.stroke();
 
     // Stones.
-    let stoneRadius = 0.5*this.sideLength;
     for (let y = 0; y < this.board.height; y++) {
       for (let x = 0; x < this.board.width; x++) {
         let color = this.board.grid[x][y];
         if (color) {
-          for (let row = 0; row < 3; ++row) {
-            for (let col = 0; col < 3; ++col) {
-              let centerX = (x + 0.5)*this.sideLength + row*boardPixelHeight;
-              let centerY = (y + 0.5)*this.sideLength + col*boardPixelWidth;
-              this.context.beginPath();
-              this.context.fillStyle = color;
-              this.context.strokeStyle = "black";
-              this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
-              this.context.fill();
-              this.context.stroke();
-            }
-          }
+          this.drawStone(x, y, color);
         }
       }
     }
@@ -188,8 +201,6 @@ class View {
       Math.floor((mouseEvent.offsetX - boardPixelWidth)/this.sideLength));
     let gridOffsetY = (
       Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
-
-    let stoneRadius = 0.5*this.sideLength;
 
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
@@ -212,27 +223,12 @@ class View {
     let gridOffsetY = (
       Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
 
-    let stoneRadius = 0.5*this.sideLength;
-
     if (
       gridOffsetX >= 0 && gridOffsetX < this.board.width &&
       gridOffsetY >= 0 && gridOffsetY < this.board.height &&
       !this.board.grid[gridOffsetX][gridOffsetY]
     ) {
-      for (let row = 0; row < 3; ++row) {
-        for (let col = 0; col < 3; ++col) {
-          let centerX = (
-            (gridOffsetX + 0.5)*this.sideLength + row*boardPixelHeight);
-          let centerY = (
-            (gridOffsetY + 0.5)*this.sideLength + col*boardPixelWidth);
-          this.context.beginPath();
-          this.context.fillStyle = this.board.turn;
-          this.context.strokeStyle = "black";
-          this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
-          this.context.fill();
-          this.context.stroke();
-        }
-      }
+      this.drawStone(gridOffsetX, gridOffsetY, this.board.turn);
     }
   }
 }
