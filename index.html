@@ -6,12 +6,19 @@
     <script src=main.js></script>
   </head>
   <body>
-    <p>
-      Prisoners Taken by Black: <sp id=prisoners_taken_by_black>0</sp>
-    </p>
-    <p>
-      Prisoners Taken by White: <sp id=prisoners_taken_by_white>0</sp>
-    </p>
+    <table style="font-family:Arial,Helvetica,sans-serif;">
+      <tr>
+        <th colspan="2">Prisoners Taken</th>
+      </tr>
+      <tr>
+        <th>By Black:</th>
+        <td id=prisoners_taken_by_black>0<td>
+      </tr>
+      <tr>
+        <th>By White:</th>
+        <td id=prisoners_taken_by_white>0<td>
+      </tr>
+    </table>
     <canvas id="play_area" width="1000px" height="1000px"></canvas>
   </body>
 </html>
