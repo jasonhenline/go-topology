@@ -1,42 +1,94 @@
 /*jshint esversion: 6 */
 
-class Board {
-  // Makes an empty board.
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
+function getConstantMatrix({width, height}, value) {
+  return new Array(height).fill(null).map(() => new Array(width).fill(value));
+}
 
-    // The state saved for undo.
-    this.state = {
-      turn: "black",
-      prisonersTakenBy: {black: 0, white: 0},
-      grid: [],
-      isLegalMove: [],
-      pastGrids: []
-    };
-
-    for (let row = 0; row < height; row++) {
-      this.state.grid.push(Array(width).fill(null));
-    }
-    for (let row = 0; row < height; row++) {
-      this.state.isLegalMove.push(Array(width).fill(true));
-    }
-    this.state.pastGrids.push(JSON.stringify(this.state.grid));
-    this.pastStates = [JSON.stringify(this.state)];
+class TorusTopology {
+  constructor({width, height}) {
+    this.size = {x: width, y: height};
   }
 
-  undo() {
-    if (this.pastStates.length > 1) {
-      this.pastStates.pop();
-      this.state = JSON.parse(this.pastStates[this.pastStates.length - 1]);
+  normalizeCoords({x, y}) {
+    return {x: (x + this.size.x)%this.size.x, y: (y + this.size.y)%this.size.y};
+  }
+
+  getOtherCoords({x, y}) {
+    let result = [];
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (row !== 1 || col !== 1) {
+          result.push(
+            {x: x + (col - 1)*this.size.x, y: y + (row - 1)*this.size.y});
+        }
+      }
     }
+    return result;
+  }
+}
+
+class CylinderTopology {
+  constructor({width, height}) {
+    this.size = {x: width, y: height};
+  }
+
+  normalizeCoords({x, y}) {
+    if (y < 0 || y >= this.size.y) {
+      return null;
+    }
+    return {x: (x + this.size.x)%this.size.x, y};
+  }
+
+  getOtherCoords({x, y}) {
+    return [{x: x - this.size.x, y}, {x: x + this.size.x, y}];
+  }
+}
+
+class MobiusStripTopology {
+  constructor({width, height}) {
+    this.size = {x: width, y: height};
+  }
+
+  normalizeCoords({x, y}) {
+    if (y < 0 || y >= this.size.y) {
+      return null;
+    } else if (x < 0 || x >= this.size.x) {
+      return {x: (x + this.size.x)%this.size.x, y: this.size.y - 1 - y};
+    } else {
+      return {x, y};
+    }
+  }
+
+  getOtherCoords({x, y}) {
+    let flipY = this.size.y - 1 - y;
+    return [{x: x - this.size.x, y: flipY}, {x: x + this.size.x, y: flipY}];
+  }
+}
+
+class GameState {
+  constructor({width, height}) {
+    this.turn = "black";
+    this.prisonersTakenBy = {black: 0, white: 0};
+    this.grid = getConstantMatrix({width, height}, null);
+    this.isLegalMove = getConstantMatrix({width, height}, true);
+    this.pastGrids = [JSON.stringify(this.grid)];
+  }
+}
+
+class Board {
+  constructor(topology) {
+    this.topology = topology;
+    this.size = topology.size;
+    this.state = 
+      new GameState({width: topology.size.x, height: topology.size.y});
+    this.pastStates = [JSON.stringify(this.state)];
   }
 
   // Get an array of dead stones in the group of this stone.
   //
   // Returns an empty array if no stones are dead.
-  getDeadGroup(x, y) {
-    const allDirections = [
+  getDeadGroup({x, y}) {
+    let allDirections = [
       {dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
 
     const color = this.state.grid[x][y];
@@ -44,29 +96,28 @@ class Board {
       return [];
     }
 
-    const seen = [JSON.stringify({x, y})];
-    const toCheck = [{position: {x, y}, directions: allDirections.slice()}];
+    let seen = [JSON.stringify({x, y})];
+    let toCheck = [{position: {x, y}, directions: allDirections.slice()}];
 
     while (toCheck.length > 0) {
-      const current = toCheck.pop();
+      let current = toCheck.pop();
       x = current.position.x;
       y = current.position.y;
-      const {dx, dy} = current.directions.pop();
-      const next = {
-        x: (x + dx + this.width)%this.width,
-        y: (y + dy + this.height)%this.height
-      };
-      const nextColor = this.state.grid[next.x][next.y];
-      if (!nextColor) {
-        // Found a liberty, no stones have to die.
-        return [];
-      } else if (nextColor === color) {
-        if (!seen.includes(JSON.stringify(next))) {
-          seen.push(JSON.stringify({x: next.x, y: next.y}));
-          toCheck.push({
-            position: {x: next.x, y: next.y},
-            directions: allDirections.slice()
-          });
+      let {dx, dy} = current.directions.pop();
+      let next = this.topology.normalizeCoords({x: x + dx, y: y + dy});
+      if (next) {
+        let nextColor = this.state.grid[next.x][next.y];
+        if (!nextColor) {
+          // Found a liberty, no stones have to die.
+          return [];
+        } else if (nextColor === color) {
+          if (!seen.includes(JSON.stringify(next))) {
+            seen.push(JSON.stringify({x: next.x, y: next.y}));
+            toCheck.push({
+              position: {x: next.x, y: next.y},
+              directions: allDirections.slice()
+            });
+          }
         }
       }
       if (current.directions.length > 0) {
@@ -77,15 +128,15 @@ class Board {
   }
 
   populateLegalMoves() {
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
+    for (let y = 0; y < this.size.y; y++) {
+      for (let x = 0; x < this.size.x; x++) {
         if (this.state.grid[x][y]) {
           this.state.isLegalMove[x][y] = false;
         } else {
-          const copyBoard = new Board(this.width, this.height);
+          let copyBoard = new Board(this.topology);
           copyBoard.state.turn = this.state.turn;
           copyBoard.state.grid = this.state.grid.map((row) => row.slice());
-          copyBoard.play(x, y, false);
+          copyBoard.play({x, y}, false);
           if (
             this.state.pastGrids.includes(
               JSON.stringify(copyBoard.state.grid))) {
@@ -98,22 +149,24 @@ class Board {
     }
   }
 
+
   // Play a stone at the given location.
   //
-  // If the move is illegal, doesn't update this.turn.
-  play(x, y, callPopulateLegalMoves = true) {
+  // If the move is illegal, this function doesn't update this.turn.
+  play({x, y}, callPopulateLegalMoves = true) {
     if (this.state.isLegalMove[x][y]) {
       this.state.grid[x][y] = this.state.turn;
-      for (let direction of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        const neighborX = (x + direction[0] + this.width)%this.width;
-        const neighborY = (y + direction[1] + this.height)%this.height;
-        for (let dead of this.getDeadGroup(neighborX, neighborY)) {
-          this.state.grid[dead.x][dead.y] = null;
-          this.state.prisonersTakenBy[this.state.turn]++;
+      for (let [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        let neighbor = this.topology.normalizeCoords({x: x + dx, y: y + dy});
+        if (neighbor) {
+          for (let dead of this.getDeadGroup(neighbor)) {
+            this.state.grid[dead.x][dead.y] = null;
+            this.state.prisonersTakenBy[this.state.turn]++;
+          }
         }
       }
       const nextTurn = (this.state.turn == "black") ? "white" : "black";
-      for (let dead of this.getDeadGroup(x, y)) {
+      for (let dead of this.getDeadGroup({x, y})) {
         this.state.grid[dead.x][dead.y] = null;
         this.state.prisonersTakenBy[nextTurn]++;
       }
@@ -125,49 +178,56 @@ class Board {
       }
     }
   }
+
+  undo() {
+    if (this.pastStates.length > 1) {
+      this.pastStates.pop();
+      this.state =
+        JSON.parse(this.pastStates[this.pastStates.length - 1]);
+    }
+  }
 }
 
 class View {
-  constructor(canvasContext, board, sideLength) {
+  constructor({canvasContext, board, sideLength}) {
     this.context = canvasContext;
     this.board = board;
     this.sideLength = sideLength;
-    this.verticalOffset = 0;
-    this.horizontalOffset = 0;
+    this.offset = {x: 0, y: 0};
   }
 
   drawStone(x, y, color) {
-    x = (x + this.horizontalOffset)%this.board.width;
-    y = (y + this.verticalOffset)%this.board.height;
+    x = (x + this.offset.x)%this.board.size.x;
+    y = (y + this.offset.y)%this.board.size.y;
 
     const stoneRadius = 0.5*this.sideLength;
-    const boardPixelWidth = this.sideLength*this.board.width;
-    const boardPixelHeight = this.sideLength*this.board.height;
+    const boardPixelWidth = this.sideLength*this.board.size.x;
+    const boardPixelHeight = this.sideLength*this.board.size.y;
     const grayStroke = "#666666";
     const grayColor = color === "black" ? grayStroke : "#f9f9f9";
 
-    for (let row = 0; row < 3; ++row) {
-      for (let col = 0; col < 3; ++col) {
-        const centerX = (x + 0.5)*this.sideLength + row*boardPixelHeight;
-        const centerY = (y + 0.5)*this.sideLength + col*boardPixelWidth;
-        this.context.beginPath();
-        if (row === 1 && col === 1) {
-          this.context.fillStyle = color;
-          this.context.strokeStyle = "black";
-        } else {
-          this.context.fillStyle = grayColor;
-          this.context.strokeStyle = grayStroke;
-        }
-        this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
-        this.context.fill();
-        this.context.stroke();
-      }
+    let draw = ({x, y}) => {
+      this.context.beginPath();
+      let centerX = (x + 0.5)*this.sideLength + boardPixelHeight;
+      let centerY = (y + 0.5)*this.sideLength + boardPixelWidth;
+      this.context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
+      this.context.fill();
+      this.context.stroke();
+    };
+
+    this.context.fillStyle = grayColor;
+    this.context.strokeStyle = grayStroke;
+    for (let other of this.board.topology.getOtherCoords({x, y})) {
+      draw(other);
     }
+    this.context.fillStyle = color;
+    this.context.strokeStyle = "black";
+    draw({x, y});
   }
 
   drawBoard() {
-    const boardPixelWidth = this.sideLength*this.board.width;
-    const boardPixelHeight = this.sideLength*this.board.height;
+    const boardPixelWidth = this.sideLength*this.board.size.x;
+    const boardPixelHeight = this.sideLength*this.board.size.y;
 
     // Blank out the whole canvas.
     this.context.fillStyle = "white";
@@ -190,13 +250,13 @@ class View {
 
     this.context.strokeStyle = "gray";
 
-    for (let row = 0; row < 3*this.board.height; row++) {
+    for (let row = 0; row < 3*this.board.size.y; row++) {
       const y = this.sideLength/2 + row*this.sideLength;
       this.context.moveTo(0, y);
       this.context.lineTo(3*boardPixelWidth, y);
     }
 
-    for (let col = 0; col < 3*this.board.width; col++) {
+    for (let col = 0; col < 3*this.board.size.x; col++) {
       const x = this.sideLength/2 + col*this.sideLength;
       this.context.moveTo(x, 0);
       this.context.lineTo(x, 3*boardPixelHeight);
@@ -209,13 +269,13 @@ class View {
 
     this.context.strokeStyle = "black";
 
-    for (let row = 0; row < this.board.height; row++) {
+    for (let row = 0; row < this.board.size.y; row++) {
       const y = boardPixelHeight + this.sideLength/2 + row*this.sideLength;
       this.context.moveTo(boardPixelWidth + 1, y);
       this.context.lineTo(2*boardPixelWidth, y);
     }
 
-    for (let col = 0; col < this.board.width; col++) {
+    for (let col = 0; col < this.board.size.x; col++) {
       const x = boardPixelWidth + this.sideLength/2 + col*this.sideLength;
       this.context.moveTo(x, boardPixelHeight + 1);
       this.context.lineTo(x, 2*boardPixelHeight);
@@ -224,8 +284,8 @@ class View {
     this.context.stroke();
 
     // Stones.
-    for (let y = 0; y < this.board.height; y++) {
-      for (let x = 0; x < this.board.width; x++) {
+    for (let y = 0; y < this.board.size.y; y++) {
+      for (let x = 0; x < this.board.size.x; x++) {
         const color = this.board.state.grid[x][y];
         if (color) {
           this.drawStone(x, y, color);
@@ -241,8 +301,8 @@ class View {
   }
 
   onCanvasMouseClickCallback(mouseEvent) {
-    const boardPixelWidth = this.sideLength*this.board.width;
-    const boardPixelHeight = this.sideLength*this.board.height;
+    const boardPixelWidth = this.sideLength*this.board.size.x;
+    const boardPixelHeight = this.sideLength*this.board.size.y;
 
     const gridOffsetX = (
       Math.floor((mouseEvent.offsetX - boardPixelWidth)/this.sideLength));
@@ -250,18 +310,18 @@ class View {
       Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
 
     const x = (
-      (gridOffsetX - this.horizontalOffset + this.board.width)%
-      this.board.width);
+      (gridOffsetX - this.offset.x + this.board.size.x)%
+      this.board.size.x);
     const y = (
-      (gridOffsetY - this.verticalOffset + this.board.height)%
-      this.board.height);
+      (gridOffsetY - this.offset.y + this.board.size.y)%
+      this.board.size.y);
 
     if (
-      gridOffsetX >= 0 && gridOffsetX < this.board.width &&
-      gridOffsetY >= 0 && gridOffsetY < this.board.height &&
+      gridOffsetX >= 0 && gridOffsetX < this.board.size.x &&
+      gridOffsetY >= 0 && gridOffsetY < this.board.size.y &&
       this.board.state.isLegalMove[x][y]
     ) {
-      this.board.play(x, y);
+      this.board.play({x, y});
     }
     this.drawBoard();
   }
@@ -269,8 +329,8 @@ class View {
   onCanvasMouseMoveCallback(mouseEvent) {
     this.drawBoard();
 
-    const boardPixelWidth = this.sideLength*this.board.width;
-    const boardPixelHeight = this.sideLength*this.board.height;
+    const boardPixelWidth = this.sideLength*this.board.size.x;
+    const boardPixelHeight = this.sideLength*this.board.size.y;
 
     const gridOffsetX = (
       Math.floor((mouseEvent.offsetX - boardPixelWidth)/this.sideLength));
@@ -278,15 +338,15 @@ class View {
       Math.floor((mouseEvent.offsetY - boardPixelHeight)/this.sideLength));
 
     const x = (
-      (gridOffsetX - this.horizontalOffset + this.board.width)%
-      this.board.width);
+      (gridOffsetX - this.offset.x + this.board.size.x)%
+      this.board.size.x);
     const y = (
-      (gridOffsetY - this.verticalOffset + this.board.height)%
-      this.board.height);
+      (gridOffsetY - this.offset.y + this.board.size.y)%
+      this.board.size.y);
 
     if (
-      gridOffsetX >= 0 && gridOffsetX < this.board.width &&
-      gridOffsetY >= 0 && gridOffsetY < this.board.height &&
+      gridOffsetX >= 0 && gridOffsetX < this.board.size.x &&
+      gridOffsetY >= 0 && gridOffsetY < this.board.size.y &&
       this.board.state.isLegalMove[x][y]
     ) {
       this.drawStone(x, y, this.board.state.turn);
@@ -308,10 +368,10 @@ class View {
 
     if (directions.has(keyboardEvent.key)) {
       const {dx, dy} = directions.get(keyboardEvent.key);
-      this.horizontalOffset = (
-        (this.horizontalOffset + this.board.width + dx)%this.board.width);
-      this.verticalOffset = (
-        (this.verticalOffset + this.board.height + dy)%this.board.height);
+      this.offset.x = (
+        (this.offset.x + this.board.size.x + dx)%this.board.size.x);
+      this.offset.y = (
+        (this.offset.y + this.board.size.y + dy)%this.board.size.y);
       this.drawBoard();
       keyboardEvent.preventDefault();
     }
@@ -319,11 +379,12 @@ class View {
 }
 
 window.onload = function() {
-  const canvas = document.getElementById("play_area");
-  const context = canvas.getContext("2d");
+  let canvas = document.getElementById("play_area");
+  let context = canvas.getContext("2d");
 
-  const board = new Board(13, 13);
-  const view = new View(context, board, 20);
+  let topology = new MobiusStripTopology({width: 13, height: 13});
+  let board = new Board(topology);
+  let view = new View({canvasContext: context, board, sideLength: 20});
 
   view.drawBoard();
   canvas.addEventListener(
