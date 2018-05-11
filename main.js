@@ -25,6 +25,10 @@ class TorusTopology {
     }
     return result;
   }
+
+  getExtendDirections() {
+    return ["x", "y"];
+  }
 }
 
 class CylinderTopology {
@@ -41,6 +45,10 @@ class CylinderTopology {
 
   getOtherCoords({x, y}) {
     return [{x: x - this.size.x, y}, {x: x + this.size.x, y}];
+  }
+
+  getExtendDirections() {
+    return ["x"];
   }
 }
 
@@ -62,6 +70,10 @@ class MobiusStripTopology {
   getOtherCoords({x, y}) {
     let flipY = this.size.y - 1 - y;
     return [{x: x - this.size.x, y: flipY}, {x: x + this.size.x, y: flipY}];
+  }
+
+  getExtendDirections() {
+    return ["x"];
   }
 }
 
@@ -359,12 +371,18 @@ class View {
   }
 
   onKeyDownCallback(keyboardEvent) {
-    const directions = new Map([
-      ["ArrowLeft", {dx: -1, dy: 0}],
-      ["ArrowRight", {dx: 1, dy: 0}],
-      ["ArrowUp", {dx: 0, dy: -1}],
-      ["ArrowDown", {dx: 0, dy: 1}]
-    ]);
+    const directionPairs = {
+      x: [["ArrowLeft", {dx: -1, dy: 0}],
+          ["ArrowRight", {dx: 1, dy: 0}]],
+      y: [["ArrowUp", {dx: 0, dy: -1}],
+          ["ArrowDown", {dx: 0, dy: 1}]]
+    }
+    let directions = new Map([]);
+    for (let direction of this.board.topology.getExtendDirections()) {
+      for (let pair of directionPairs[direction]) {
+        directions.set(pair[0], pair[1]);
+      }
+    }
 
     if (directions.has(keyboardEvent.key)) {
       const {dx, dy} = directions.get(keyboardEvent.key);
@@ -382,7 +400,7 @@ window.onload = function() {
   let canvas = document.getElementById("play_area");
   let context = canvas.getContext("2d");
 
-  let topology = new MobiusStripTopology({width: 13, height: 13});
+  let topology = new CylinderTopology({width: 13, height: 13});
   let board = new Board(topology);
   let view = new View({canvasContext: context, board, sideLength: 20});
 
