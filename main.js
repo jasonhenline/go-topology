@@ -376,7 +376,7 @@ class View {
           ["ArrowRight", {dx: 1, dy: 0}]],
       y: [["ArrowUp", {dx: 0, dy: -1}],
           ["ArrowDown", {dx: 0, dy: 1}]]
-    }
+    };
     let directions = new Map([]);
     for (let direction of this.board.topology.getExtendDirections()) {
       for (let pair of directionPairs[direction]) {
