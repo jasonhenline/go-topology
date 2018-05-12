@@ -238,6 +238,10 @@ class View {
   }
 
   drawBoard() {
+    const extendDirections = this.board.topology.getExtendDirections();
+    const extendsX = extendDirections.includes("x");
+    const extendsY = extendDirections.includes("y");
+
     const boardPixelWidth = this.sideLength*this.board.size.x;
     const boardPixelHeight = this.sideLength*this.board.size.y;
 
@@ -262,16 +266,23 @@ class View {
 
     this.context.strokeStyle = "gray";
 
-    for (let row = 0; row < 3*this.board.size.y; row++) {
+    let rowLower = (extendsY ? 0 : 1)*this.board.size.y;
+    let rowUpper = (extendsY ? 3 : 2)*this.board.size.y;
+    let colLower = (extendsX ? 0 : 1)*this.board.size.x;
+    let colUpper = (extendsX ? 3 : 2)*this.board.size.x;
+    let yFudge = extendsY ? 0 : 0.5;
+    let xFudge = extendsX ? 0 : 0.5;
+
+    for (let row = rowLower; row < rowUpper; row++) {
       const y = this.sideLength/2 + row*this.sideLength;
-      this.context.moveTo(0, y);
-      this.context.lineTo(3*boardPixelWidth, y);
+      this.context.moveTo((colLower + xFudge)*this.sideLength, y);
+      this.context.lineTo((colUpper - xFudge)*this.sideLength, y);
     }
 
-    for (let col = 0; col < 3*this.board.size.x; col++) {
+    for (let col = colLower; col < colUpper; col++) {
       const x = this.sideLength/2 + col*this.sideLength;
-      this.context.moveTo(x, 0);
-      this.context.lineTo(x, 3*boardPixelHeight);
+      this.context.moveTo(x, (rowLower + yFudge)*this.sideLength);
+      this.context.lineTo(x, (rowUpper - yFudge)*this.sideLength);
     }
 
     this.context.stroke();
@@ -283,14 +294,14 @@ class View {
 
     for (let row = 0; row < this.board.size.y; row++) {
       const y = boardPixelHeight + this.sideLength/2 + row*this.sideLength;
-      this.context.moveTo(boardPixelWidth + 1, y);
-      this.context.lineTo(2*boardPixelWidth, y);
+      this.context.moveTo(boardPixelWidth + 1 + xFudge*this.sideLength, y);
+      this.context.lineTo(2*boardPixelWidth - xFudge*this.sideLength, y);
     }
 
     for (let col = 0; col < this.board.size.x; col++) {
       const x = boardPixelWidth + this.sideLength/2 + col*this.sideLength;
-      this.context.moveTo(x, boardPixelHeight + 1);
-      this.context.lineTo(x, 2*boardPixelHeight);
+      this.context.moveTo(x, boardPixelHeight + 1 + yFudge*this.sideLength);
+      this.context.lineTo(x, 2*boardPixelHeight - yFudge*this.sideLength);
     }
 
     this.context.stroke();
