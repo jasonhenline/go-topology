@@ -2,6 +2,13 @@
 // (other than this binding).
 JTH = {};
 
+// Mod operator that handles negative numerators correctly.
+JTH.mod = function(n, d) {
+  let r = n % d;
+  return r >= 0 ? r : r + d;
+}
+
+// Make a matrix containing all the same value.
 JTH.getConstantMatrix = function({width, height}, value) {
   let result = [];
   for (let i = 0; i < height; i++) {
@@ -18,20 +25,7 @@ JTH.getTorusTopology = function({width, height}) {
   let size = {x: width, y: height};
 
   let normalizeCoords = function({x, y}) {
-    return {x: (x + size.x)%size.x, y: (y + size.y)%size.y};
-  };
-
-  let getOtherCoords = function({x, y}) {
-    let result = [];
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        if (row !== 1 || col !== 1) {
-          result.push(
-            {x: x + (col - 1)*size.x, y: y + (row - 1)*size.y});
-        }
-      }
-    }
-    return result;
+    return {x: JTH.mod(x, size.x), y: JTH.mod(y, size.y)};
   };
 
   let getExtendDirections = function() {
@@ -41,7 +35,6 @@ JTH.getTorusTopology = function({width, height}) {
   return {
     size,
     normalizeCoords,
-    getOtherCoords,
     getExtendDirections
   };
 };
@@ -53,11 +46,7 @@ JTH.getCylinderTopology = function({width, height}) {
     if (y < 0 || y >= size.y) {
       return null;
     }
-    return {x: (x + size.x)%size.x, y};
-  };
-
-  let getOtherCoords = function({x, y}) {
-    return [{x: x - size.x, y}, {x: x + size.x, y}];
+    return {x: JTH.mod(x, size.x), y};
   };
 
   let getExtendDirections = function() {
@@ -67,7 +56,6 @@ JTH.getCylinderTopology = function({width, height}) {
   return {
     size,
     normalizeCoords,
-    getOtherCoords,
     getExtendDirections
   };
 };
@@ -76,18 +64,12 @@ JTH.getMobiusStripTopology = function({width, height}) {
   let size = {x: width, y: height};
 
   let normalizeCoords = function({x, y}) {
-    if (y < 0 || y >= size.y) {
-      return null;
-    } else if (x < 0 || x >= size.x) {
-      return {x: (x + size.x)%size.x, y: size.y - 1 - y};
+    let fullX = JTH.mod(x, 2*size.x);
+    if (fullX < size.x) {
+      return {x: fullX, y: y};
     } else {
-      return {x, y};
+      return {x: fullX - size.x, y: size.y - 1 - y};
     }
-  }
-
-  let getOtherCoords = function({x, y}) {
-    let flipY = size.y - 1 - y;
-    return [{x: x - size.x, y: flipY}, {x: x + size.x, y: flipY}];
   }
 
   let getExtendDirections = function() {
@@ -97,7 +79,6 @@ JTH.getMobiusStripTopology = function({width, height}) {
   return {
     size,
     normalizeCoords,
-    getOtherCoords,
     getExtendDirections
   };
 };
@@ -115,8 +96,8 @@ JTH.getGameState = function({width, height}) {
 
 JTH.getBoard = function(topology) {
   // All the directions you can move to check for liberties.
-  let allDirections = [
-    {dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
+  let allDirections =
+    [{dx: -1, dy: 0}, {dx: 1, dy: 0}, {dx: 0, dy: -1}, {dx: 0, dy: 1}];
 
   let size = topology.size;
 
@@ -219,7 +200,12 @@ JTH.getBoard = function(topology) {
   let undo = function() {
     if (pastStates.length > 1) {
       pastStates.pop();
-      state = JSON.parse(pastStates[pastStates.length - 1]);
+      let lastState = JSON.parse(pastStates[pastStates.length - 1]);
+      for (let key in lastState) {
+        if (lastState.hasOwnProperty(key)) {
+          state[key] = lastState[key];
+        }
+      }
     }
   };
 
@@ -239,51 +225,81 @@ JTH.getView = function({canvasContext, board, sideLength}) {
   const stoneRadius = 0.5*sideLength;
   const boardPixelWidth = sideLength*board.size.x;
   const boardPixelHeight = sideLength*board.size.y;
-  const grayStroke = "#666666";
-
-  let drawStone = function(x, y, color) {
-    let grayColor = color === "black" ? grayStroke : "#f9f9f9";
-
-    x = (x + offset.x)%board.size.x;
-    y = (y + offset.y)%board.size.y;
-
-    let draw = ({x, y}) => {
-      context.beginPath();
-      let centerX = (x + 0.5)*sideLength + boardPixelHeight;
-      let centerY = (y + 0.5)*sideLength + boardPixelWidth;
-      context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
-      context.fill();
-      context.stroke();
-    };
-
-    context.fillStyle = grayColor;
-    context.strokeStyle = grayStroke;
-    for (let other of board.topology.getOtherCoords({x, y})) {
-      draw(other);
-    }
-    context.fillStyle = color;
-    context.strokeStyle = "black";
-    draw({x, y});
+  let grayFill = {
+    black: "#666666",
+    white: "#f9f9f9"
   };
+  let grayStroke = {
+    black: "#666666",
+    white: "#666666"
+  }
+  let extendDirections = board.topology.getExtendDirections();
+  const extendsX = extendDirections.includes("x");
+  const extendsY = extendDirections.includes("y");
+
+  // {x, y} are the apparent coordinates of the stone in the (shadow) board.
+  //
+  // {row, col} are the coordinates of the board itself among the shadow
+  // boards.
+  let drawSingleStone = function({x, y}, {row, col}, {fillStyle, strokeStyle}) {
+    let centerX = (x + 0.5)*sideLength + col*boardPixelHeight;
+    let centerY = (y + 0.5)*sideLength + row*boardPixelWidth;
+
+    context.beginPath();
+    context.fillStyle = fillStyle;
+    context.strokeStyle = strokeStyle
+    context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
+    context.fill();
+    context.stroke();
+  }
+
+  // {x, y} are the apparent coordinates of the stone in the center board.
+  let drawStoneAndShadows = function({x, y}, color) {
+    let centerCol = extendsX ? 1 : 0;
+    let centerRow = extendsY ? 1 : 0;
+
+    // Draw the stone itself.
+    drawSingleStone(
+      {x, y},
+      {row: centerRow, col: centerCol},
+      {fillStyle: color, strokeStyle: "black"});
+
+    // Draw the shadow stones.
+    let colBound = extendsX ? 1 : 0;
+    let rowBound = extendsY ? 1 : 0;
+    for (let row = -rowBound; row <= rowBound; row++) {
+      for (let col = -colBound; col <= colBound; col++) {
+        if (row !== 0 || col !== 0) {
+          shadowCoords =
+            board.topology.normalizeCoords(
+              {x: x + col*board.size.x, y: y + row*board.size.y});
+          drawSingleStone(
+            shadowCoords,
+            {row: centerRow + row, col: centerCol + col},
+            {fillStyle: grayFill[color], strokeStyle: grayStroke[color]});
+        }
+      }
+    }
+  }
 
   let drawBoard = function() {
-    let extendDirections = board.topology.getExtendDirections();
-    const extendsX = extendDirections.includes("x");
-    const extendsY = extendDirections.includes("y");
-
     // Blank out the whole canvas.
     context.fillStyle = "white";
     context.fillRect(0, 0, 1000, 1000);
 
     // Outer dim rectangle
+    let bigWidth = (extendsX ? 3 : 1)*boardPixelWidth;
+    let bigHeight = (extendsY ? 3 : 1)*boardPixelHeight;
     context.fillStyle = "#ffffcc";
-    context.fillRect(0, 0, 3*boardPixelWidth, 3*boardPixelHeight);
+    context.fillRect(0, 0, bigWidth, bigHeight);
 
     // Inner bright rectangle
+    let upperLeftX = (extendsX ? 1 : 0)*boardPixelWidth;
+    let upperLeftY = (extendsY ? 1 : 0)*boardPixelHeight;
     context.fillStyle = "#ffcc00";
     context.fillRect(
-      boardPixelWidth,
-      boardPixelHeight,
+      upperLeftX,
+      upperLeftY,
       boardPixelWidth,
       boardPixelHeight);
 
@@ -292,22 +308,20 @@ JTH.getView = function({canvasContext, board, sideLength}) {
 
     context.strokeStyle = "gray";
 
-    let rowLower = (extendsY ? 0 : 1)*board.size.y;
-    let rowUpper = (extendsY ? 3 : 2)*board.size.y;
-    let colLower = (extendsX ? 0 : 1)*board.size.x;
-    let colUpper = (extendsX ? 3 : 2)*board.size.x;
+    let rowUpper = (extendsY ? 3 : 1)*board.size.y;
+    let colUpper = (extendsX ? 3 : 1)*board.size.x;
     let yFudge = extendsY ? 0 : 0.5;
     let xFudge = extendsX ? 0 : 0.5;
 
-    for (let row = rowLower; row < rowUpper; row++) {
+    for (let row = 0; row < rowUpper; row++) {
       const y = sideLength/2 + row*sideLength;
-      context.moveTo((colLower + xFudge)*sideLength, y);
+      context.moveTo(xFudge*sideLength, y);
       context.lineTo((colUpper - xFudge)*sideLength, y);
     }
 
-    for (let col = colLower; col < colUpper; col++) {
+    for (let col = 0; col < colUpper; col++) {
       const x = sideLength/2 + col*sideLength;
-      context.moveTo(x, (rowLower + yFudge)*sideLength);
+      context.moveTo(x, yFudge*sideLength);
       context.lineTo(x, (rowUpper - yFudge)*sideLength);
     }
 
@@ -318,16 +332,21 @@ JTH.getView = function({canvasContext, board, sideLength}) {
 
     context.strokeStyle = "black";
 
+    let xOffsetCenterBoard = (extendsX ? 1 : 0)*boardPixelWidth;
+    let yOffsetCenterBoard = (extendsY ? 1 : 0)*boardPixelHeight;
+
     for (let row = 0; row < board.size.y; row++) {
-      const y = boardPixelHeight + sideLength/2 + row*sideLength;
-      context.moveTo(boardPixelWidth + 1 + xFudge*sideLength, y);
-      context.lineTo(2*boardPixelWidth - xFudge*sideLength, y);
+      const y = yOffsetCenterBoard + sideLength/2 + row*sideLength;
+      context.moveTo(xOffsetCenterBoard + 1 + xFudge*sideLength, y);
+      context.lineTo(
+        xOffsetCenterBoard + boardPixelWidth - xFudge*sideLength, y);
     }
 
     for (let col = 0; col < board.size.x; col++) {
-      const x = boardPixelWidth + sideLength/2 + col*sideLength;
-      context.moveTo(x, boardPixelHeight + 1 + yFudge*sideLength);
-      context.lineTo(x, 2*boardPixelHeight - yFudge*sideLength);
+      const x = xOffsetCenterBoard + sideLength/2 + col*sideLength;
+      context.moveTo(x, yOffsetCenterBoard + 1 + yFudge*sideLength);
+      context.lineTo(
+        x, yOffsetCenterBoard + boardPixelHeight - yFudge*sideLength);
     }
 
     context.stroke();
@@ -337,7 +356,9 @@ JTH.getView = function({canvasContext, board, sideLength}) {
       for (let x = 0; x < board.size.x; x++) {
         const color = board.state.grid[x][y];
         if (color) {
-          drawStone(x, y, color);
+          normalCoords =
+            board.topology.normalizeCoords({x: x + offset.x, y: y + offset.y});
+          drawStoneAndShadows(normalCoords, color);
         }
       }
     }
@@ -350,20 +371,24 @@ JTH.getView = function({canvasContext, board, sideLength}) {
   };
 
   let onCanvasMouseClickCallback = function(mouseEvent) {
-    const gridOffsetX = (
-      Math.floor((mouseEvent.offsetX - boardPixelWidth)/sideLength));
-    const gridOffsetY = (
-      Math.floor((mouseEvent.offsetY - boardPixelHeight)/sideLength));
+    let xOffsetCenterBoard = (extendsX ? 1 : 0)*boardPixelWidth;
+    let yOffsetCenterBoard = (extendsY ? 1 : 0)*boardPixelHeight;
 
-    const x = (gridOffsetX - offset.x + board.size.x)% board.size.x;
-    const y = (gridOffsetY - offset.y + board.size.y)% board.size.y;
+    const gridOffsetX = (
+      Math.floor((mouseEvent.offsetX - xOffsetCenterBoard)/sideLength));
+    const gridOffsetY = (
+      Math.floor((mouseEvent.offsetY - yOffsetCenterBoard)/sideLength));
+
+    let normalCoords =
+      board.topology.normalizeCoords(
+        {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
 
     if (
       gridOffsetX >= 0 && gridOffsetX < board.size.x &&
       gridOffsetY >= 0 && gridOffsetY < board.size.y &&
-      board.state.isLegalMove[x][y]
+      board.state.isLegalMove[normalCoords.x][normalCoords.y]
     ) {
-      board.play({x, y});
+      board.play(normalCoords);
     }
     drawBoard();
   };
@@ -371,20 +396,24 @@ JTH.getView = function({canvasContext, board, sideLength}) {
   let onCanvasMouseMoveCallback = function(mouseEvent) {
     drawBoard();
 
-    const gridOffsetX = (
-      Math.floor((mouseEvent.offsetX - boardPixelWidth)/sideLength));
-    const gridOffsetY = (
-      Math.floor((mouseEvent.offsetY - boardPixelHeight)/sideLength));
+    let xOffsetCenterBoard = (extendsX ? 1 : 0)*boardPixelWidth;
+    let yOffsetCenterBoard = (extendsY ? 1 : 0)*boardPixelHeight;
 
-    const x = (gridOffsetX - offset.x + board.size.x)%board.size.x;
-    const y = (gridOffsetY - offset.y + board.size.y)%board.size.y;
+    const gridOffsetX = (
+      Math.floor((mouseEvent.offsetX - xOffsetCenterBoard)/sideLength));
+    const gridOffsetY = (
+      Math.floor((mouseEvent.offsetY - yOffsetCenterBoard)/sideLength));
+
+    let normalCoords =
+      board.topology.normalizeCoords(
+        {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
 
     if (
       gridOffsetX >= 0 && gridOffsetX < board.size.x &&
       gridOffsetY >= 0 && gridOffsetY < board.size.y &&
-      board.state.isLegalMove[x][y]
+      board.state.isLegalMove[normalCoords.x][normalCoords.y]
     ) {
-      drawStone(x, y, board.state.turn);
+      drawStoneAndShadows({x: gridOffsetX, y: gridOffsetY}, board.state.turn);
     }
   };
 
@@ -411,8 +440,8 @@ JTH.getView = function({canvasContext, board, sideLength}) {
   let onKeyDownCallback = function(keyboardEvent) {
     if (keyToDirectionMap[keyboardEvent.key]) {
       const {dx, dy} = keyToDirectionMap[keyboardEvent.key];
-      offset.x = (offset.x + board.size.x + dx)%board.size.x;
-      offset.y = (offset.y + board.size.y + dy)%board.size.y;
+      offset.x += dx;
+      offset.y += dy;
       drawBoard();
       keyboardEvent.preventDefault();
     }
@@ -431,7 +460,7 @@ window.onload = function() {
   let canvas = document.getElementById("play_area");
   let context = canvas.getContext("2d");
 
-  let topology = JTH.getCylinderTopology({width: 13, height: 13});
+  let topology = JTH.getTorusTopology({width: 13, height: 13});
   let board = JTH.getBoard(topology);
   let view = JTH.getView({canvasContext: context, board, sideLength: 20});
 
