@@ -457,24 +457,41 @@ JTH.getView = function({canvasContext, board, sideLength}) {
 };
 
 window.onload = function() {
-  let canvas = document.getElementById("play_area");
-  let context = canvas.getContext("2d");
+  let startGameButton = document.getElementById("start_game_button");
+  startGameButton.addEventListener("click", function() {
+    let width = Number(document.getElementById("width_input").value);
+    let height = Number(document.getElementById("height_input").value);
+    let topology = function() {
+      if (document.getElementById("radio_torus").checked) {
+        return JTH.getTorusTopology({width, height});
+      } else if (document.getElementById("radio_cylinder").checked) {
+        return JTH.getCylinderTopology({width, height});
+      } else if (document.getElementById("radio_mobius").checked) {
+        return JTH.getMobiusStripTopology({width, height});
+      }
+    }();
 
-  let topology = JTH.getTorusTopology({width: 13, height: 13});
-  let board = JTH.getBoard(topology);
-  let view = JTH.getView({canvasContext: context, board, sideLength: 20});
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("play_screen").style.display = "block";
 
-  view.drawBoard();
-  canvas.addEventListener(
-    "mousemove", (mouseEvent) => view.onCanvasMouseMoveCallback(mouseEvent));
-  canvas.addEventListener(
-    "click", (mouseEvent) => view.onCanvasMouseClickCallback(mouseEvent));
+    let canvas = document.getElementById("play_area");
+    let context = canvas.getContext("2d");
 
-  const undoButton = document.getElementById("undo_button");
-  undoButton.addEventListener(
-    "click", (mouseEvent) => view.onUndoMouseClickCallback(mouseEvent));
+    let board = JTH.getBoard(topology);
+    let view = JTH.getView({canvasContext: context, board, sideLength: 20});
 
-  window.addEventListener(
-    "keydown", (keyboardEvent) => view.onKeyDownCallback(keyboardEvent));
+    view.drawBoard();
+    canvas.addEventListener(
+      "mousemove", (mouseEvent) => view.onCanvasMouseMoveCallback(mouseEvent));
+    canvas.addEventListener(
+      "click", (mouseEvent) => view.onCanvasMouseClickCallback(mouseEvent));
+
+    const undoButton = document.getElementById("undo_button");
+    undoButton.addEventListener(
+      "click", (mouseEvent) => view.onUndoMouseClickCallback(mouseEvent));
+
+    window.addEventListener(
+      "keydown", (keyboardEvent) => view.onKeyDownCallback(keyboardEvent));
+  });
 };
 

@@ -6,25 +6,66 @@
     <script src=main.js></script>
   </head>
   <body style="font-family:Arial,Helvetica,sans-serif;">
-    <p>
-    <table>
-      <tr>
-        <th colspan="2">Prisoners Taken</th>
-      </tr>
-      <tr>
-        <th>By Black:</th>
-        <td id=prisoners_taken_by_black>0<td>
-      </tr>
-      <tr>
-        <th>By White:</th>
-        <td id=prisoners_taken_by_white>0<td>
-      </tr>
-    </table>
-    </p>
-    <p>
-    <button id="undo_button">UNDO</button>
-    </p>
-    <p>Once stones are played, use the keyboard arrow keys to scroll the board.</p>
-    <canvas id="play_area" width="1000px" height="1000px"></canvas>
+    <div id=setup>
+      <h1>Choose Game Parameters</h1>
+      <table>
+        <tr>
+          <th colspan="2" align="left">
+            Board Dimensions:
+          </th>
+        </tr>
+        <tr>
+          <td>Width:</td>
+          <td><input type="number" name="width" id="width_input" min="1" max="19" value="13"></td>
+        </tr>
+        <tr>
+          <td>Height:</td>
+          <td><input type="number" name="height" id="height_input" min="1" max="19" value="13"></td>
+        </tr>
+      </table>
+      </p>
+      <p>
+      <table>
+        <tr>
+          <th align="left">Topology:</th>
+        </tr>
+        <tr>
+          <td>
+            <input type="radio" name="topology" value="torus" id="radio_torus" checked>
+            <label for="radio_torus">Torus</label>
+            <input type="radio" name="topology" value="cylinder" id="radio_cylinder">
+            <label for="radio_cylinder">Cylinder</label>
+            <input type="radio" name="topology" value="mobius" id="radio_mobius">
+            <label for="radio_mobius">Mobius Strip</label>
+          </td>
+        </tr>
+      </table>
+      </p>
+      <p>
+      <button id="start_game_button">Start Game</button>
+      </p>
+    </div>
+    <div id=play_screen style="display: none">
+      <p>
+      <table>
+        <tr>
+          <th colspan="2">Prisoners Taken</th>
+        </tr>
+        <tr>
+          <th>By Black:</th>
+          <td id=prisoners_taken_by_black>0<td>
+        </tr>
+        <tr>
+          <th>By White:</th>
+          <td id=prisoners_taken_by_white>0<td>
+        </tr>
+      </table>
+      </p>
+      <p>
+      <button id="undo_button">UNDO</button>
+      </p>
+      <p>Once stones are played, use the keyboard arrow keys to scroll the board.</p>
+      <canvas id="play_area" width="1000px" height="1000px"></canvas>
+    </div>
   </body>
 </html>
