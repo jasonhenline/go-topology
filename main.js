@@ -21,24 +21,6 @@ JTH.getConstantMatrix = function({width, height}, value) {
   return result;
 };
 
-JTH.getTorusTopology = function({width, height}) {
-  let size = {x: width, y: height};
-
-  let normalizeCoords = function({x, y}) {
-    return {x: JTH.mod(x, size.x), y: JTH.mod(y, size.y)};
-  };
-
-  let getExtendDirections = function() {
-    return ["x", "y"];
-  };
-
-  return {
-    size,
-    normalizeCoords,
-    getExtendDirections
-  };
-};
-
 JTH.getCylinderTopology = function({width, height}) {
   let size = {x: width, y: height};
 
@@ -51,6 +33,24 @@ JTH.getCylinderTopology = function({width, height}) {
 
   let getExtendDirections = function() {
     return ["x"];
+  };
+
+  return {
+    size,
+    normalizeCoords,
+    getExtendDirections
+  };
+};
+
+JTH.getTorusTopology = function({width, height}) {
+  let size = {x: width, y: height};
+
+  let normalizeCoords = function({x, y}) {
+    return {x: JTH.mod(x, size.x), y: JTH.mod(y, size.y)};
+  };
+
+  let getExtendDirections = function() {
+    return ["x", "y"];
   };
 
   return {
@@ -74,6 +74,29 @@ JTH.getMobiusStripTopology = function({width, height}) {
 
   let getExtendDirections = function() {
     return ["x"];
+  }
+
+  return {
+    size,
+    normalizeCoords,
+    getExtendDirections
+  };
+};
+
+JTH.getKleinBottleTopology = function({width, height}) {
+  let size = {x: width, y: height};
+
+  let normalizeCoords = function({x, y}) {
+    let fullX = JTH.mod(x, 2*size.x);
+    if (fullX < size.x) {
+      return {x: fullX, y: JTH.mod(y, size.y)};
+    } else {
+      return {x: fullX - size.x, y: JTH.mod(size.y - 1 - y, size.y)};
+    }
+  }
+
+  let getExtendDirections = function() {
+    return ["x", "y"];
   }
 
   return {
@@ -468,6 +491,8 @@ window.onload = function() {
         return JTH.getCylinderTopology({width, height});
       } else if (document.getElementById("radio_mobius").checked) {
         return JTH.getMobiusStripTopology({width, height});
+      } else if (document.getElementById("radio_klein").checked) {
+        return JTH.getKleinBottleTopology({width, height});
       }
     }();
 
