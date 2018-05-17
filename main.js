@@ -10,9 +10,9 @@
   // Make a matrix containing all the same value.
   let getConstantMatrix = function({width, height}, value) {
     let result = [];
-    for (let i = 0; i < height; i++) {
+    for (let i = 0; i < width; i++) {
       let row = [];
-      for (let j = 0; j < width; j++) {
+      for (let j = 0; j < height; j++) {
         row.push(value);
       }
       result.push(row);
@@ -259,14 +259,17 @@
     const extendsX = extendDirections.includes("x");
     const extendsY = extendDirections.includes("y");
 
+    canvas.setAttribute("width", (extendsX ? 3 : 1)*boardPixelWidth);
+    canvas.setAttribute("height", (extendsY ? 3 : 1)*boardPixelHeight);
+
     // {x, y} are the apparent coordinates of the stone in the (shadow) board.
     //
     // {row, col} are the coordinates of the board itself among the shadow
     // boards.
     let drawSingleStone = function(
         {x, y}, {row, col}, {fillStyle, strokeStyle}) {
-      let centerX = (x + 0.5)*sideLength + col*boardPixelHeight;
-      let centerY = (y + 0.5)*sideLength + row*boardPixelWidth;
+      let centerX = (x + 0.5)*sideLength + col*boardPixelWidth;
+      let centerY = (y + 0.5)*sideLength + row*boardPixelHeight;
 
       context.beginPath();
       context.fillStyle = fillStyle;
