@@ -169,6 +169,7 @@
     };
 
     let populateLegalMoves = function() {
+      let sliceRow = (row) => row.slice();
       for (let y = 0; y < size.y; y++) {
         for (let x = 0; x < size.x; x++) {
           if (state.grid[x][y]) {
@@ -176,7 +177,7 @@
           } else {
             let copyBoard = getBoard(topology);
             copyBoard.state.turn = state.turn;
-            copyBoard.state.grid = state.grid.map((row) => row.slice());
+            copyBoard.state.grid = state.grid.map(sliceRow);
             copyBoard.play({x, y}, false);
             if (
               state.pastGrids.includes(
