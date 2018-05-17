@@ -240,9 +240,9 @@
     };
   };
 
-  let getView = function({canvasContext, board, sideLength}) {
+  let getView = function({canvas, board, sideLength}) {
     let offset = {x: 0, y: 0};
-    let context = canvasContext;
+    let context = canvas.getContext("2d");
 
     const stoneRadius = 0.5*sideLength;
     const boardPixelWidth = sideLength*board.size.x;
@@ -506,10 +506,9 @@
       document.getElementById("play_screen").style.display = "block";
 
       let canvas = document.getElementById("play_area");
-      let context = canvas.getContext("2d");
 
       let board = getBoard(topology);
-      let view = getView({canvasContext: context, board, sideLength: 20});
+      let view = getView({canvas: canvas, board, sideLength: 20});
 
       view.drawBoard();
       canvas.addEventListener(
