@@ -408,16 +408,16 @@
       const gridOffsetY = (
         Math.floor((mouseEvent.offsetY - yOffsetCenterBoard)/sideLength));
 
-      let normalCoords =
-        board.topology.normalizeCoords(
-          {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
-
       if (
         gridOffsetX >= 0 && gridOffsetX < board.size.x &&
-        gridOffsetY >= 0 && gridOffsetY < board.size.y &&
-        board.state.isLegalMove[normalCoords.x][normalCoords.y]
+        gridOffsetY >= 0 && gridOffsetY < board.size.y
       ) {
-        board.play(normalCoords);
+        let normalCoords =
+          board.topology.normalizeCoords(
+            {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
+        if (board.state.isLegalMove[normalCoords.x][normalCoords.y]) {
+          board.play(normalCoords);
+        }
       }
       drawBoard();
     };
@@ -433,16 +433,17 @@
       const gridOffsetY = (
         Math.floor((mouseEvent.offsetY - yOffsetCenterBoard)/sideLength));
 
-      let normalCoords =
-        board.topology.normalizeCoords(
-          {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
-
       if (
         gridOffsetX >= 0 && gridOffsetX < board.size.x &&
-        gridOffsetY >= 0 && gridOffsetY < board.size.y &&
-        board.state.isLegalMove[normalCoords.x][normalCoords.y]
+        gridOffsetY >= 0 && gridOffsetY < board.size.y
       ) {
-        drawStoneAndShadows({x: gridOffsetX, y: gridOffsetY}, board.state.turn);
+        let normalCoords =
+          board.topology.normalizeCoords(
+            {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
+        if (board.state.isLegalMove[normalCoords.x][normalCoords.y]) {
+          drawStoneAndShadows(
+            {x: gridOffsetX, y: gridOffsetY}, board.state.turn);
+        }
       }
     };
 
