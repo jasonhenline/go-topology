@@ -63,6 +63,9 @@
     let size = {x: width, y: height};
 
     let normalizeCoords = function({x, y}) {
+      if (y < 0 || y >= size.y) {
+        return null;
+      }
       let fullX = mod(x, 2*size.x);
       if (fullX < size.x) {
         return {x: fullX, y: y};
