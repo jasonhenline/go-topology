@@ -194,6 +194,10 @@
       }
     };
 
+    let getNextTurn = function() {
+      return state.turn == "black" ? "white" : "black";
+    }
+
     // Play a stone at the given location.
     //
     // If the move is illegal, this function doesn't update turn.
@@ -209,7 +213,7 @@
             }
           }
         }
-        const nextTurn = (state.turn == "black") ? "white" : "black";
+        const nextTurn = getNextTurn();
         for (let dead of getDeadGroup({x, y})) {
           state.grid[dead.x][dead.y] = null;
           state.prisonersTakenBy[nextTurn]++;
@@ -235,11 +239,17 @@
       }
     };
 
+    let pass = function() {
+      state.turn = getNextTurn();
+      pastStates.push(JSON.stringify(state));
+    };
+
     return {
       topology,
       size,
       state,
       play,
+      pass,
       undo
     };
   };
@@ -470,11 +480,15 @@
       drawBoard();
     };
 
+    let onPassMouseClickCallback = function(mouseEvent) {
+      board.pass();
+      drawBoard();
+    };
+
     let onUndoMouseClickCallback = function(mouseEvent) {
       board.undo();
       drawBoard();
     };
-
 
     let directionPairs = {
       x: [["ArrowLeft", {dx: -1, dy: 0}],
@@ -505,6 +519,7 @@
       onCanvasMouseClickCallback,
       onCanvasMouseMoveCallback,
       onBodyMouseMoveCallback,
+      onPassMouseClickCallback,
       onUndoMouseClickCallback,
       onKeyDownCallback
     };
@@ -545,6 +560,10 @@
       document.body.addEventListener(
         "mousemove",
         (mouseEvent) => view.onBodyMouseMoveCallback(mouseEvent));
+
+      const passButton = document.getElementById("pass_button");
+      passButton.addEventListener(
+        "click", (mouseEvent) => view.onPassMouseClickCallback(mouseEvent));
 
       const undoButton = document.getElementById("undo_button");
       undoButton.addEventListener(
