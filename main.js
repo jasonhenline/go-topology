@@ -271,20 +271,22 @@
     // {row, col} are the coordinates of the board itself among the shadow
     // boards.
     let drawSingleStone = function(
-        {x, y}, {row, col}, {fillStyle, strokeStyle}) {
+        {x, y}, {row, col}, {fillStyle, strokeStyle, alpha=1.0}) {
       let centerX = (x + 0.5)*sideLength + col*boardPixelWidth;
       let centerY = (y + 0.5)*sideLength + row*boardPixelHeight;
 
       context.beginPath();
       context.fillStyle = fillStyle;
       context.strokeStyle = strokeStyle;
+      context.globalAlpha = alpha;
       context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
       context.fill();
       context.stroke();
+      context.globalAlpha = 1.0;
     };
 
     // {x, y} are the apparent coordinates of the stone in the center board.
-    let drawStoneAndShadows = function({x, y}, color) {
+    let drawStoneAndShadows = function({x, y}, {color, alpha=1.0}) {
       let centerCol = extendsX ? 1 : 0;
       let centerRow = extendsY ? 1 : 0;
 
@@ -292,7 +294,7 @@
       drawSingleStone(
         {x, y},
         {row: centerRow, col: centerCol},
-        {fillStyle: color, strokeStyle: "black"});
+        {fillStyle: color, strokeStyle: "black", alpha});
 
       // Draw the shadow stones.
       let colBound = extendsX ? 1 : 0;
@@ -306,7 +308,12 @@
             drawSingleStone(
               shadowCoords,
               {row: centerRow + row, col: centerCol + col},
-              {fillStyle: grayFill[color], strokeStyle: grayStroke[color]});
+              {
+                fillStyle: grayFill[color],
+                strokeStyle: grayStroke[color],
+                alpha
+              }
+            );
           }
         }
       }
@@ -389,7 +396,7 @@
             let normalCoords =
               board.topology.normalizeCoords(
                 {x: x + offset.x, y: y + offset.y});
-            drawStoneAndShadows(normalCoords, color);
+            drawStoneAndShadows(normalCoords, {color});
           }
         }
       }
@@ -452,7 +459,8 @@
             {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
         if (board.state.isLegalMove[normalCoords.x][normalCoords.y]) {
           drawStoneAndShadows(
-            {x: gridOffsetX, y: gridOffsetY}, board.state.turn);
+            {x: gridOffsetX, y: gridOffsetY},
+            {color: board.state.turn, alpha: 0.5});
         }
       }
     };
