@@ -424,9 +424,15 @@
         }
       }
       drawBoard();
+      mouseEvent.stopPropagation();
     };
 
     let onCanvasMouseMoveCallback = function(mouseEvent) {
+      // Moving the mouse outside the canvas causes the board to be redrawn
+      // with no proposed stones. We don't want to draw over our proposed
+      // stones, so we don't let this event get to the other handler.
+      mouseEvent.stopPropagation();
+
       drawBoard();
 
       let xOffsetCenterBoard = (extendsX ? 1 : 0)*boardPixelWidth;
@@ -449,6 +455,11 @@
             {x: gridOffsetX, y: gridOffsetY}, board.state.turn);
         }
       }
+    };
+
+    // Clear the proposed stones if the mouse moves outside the canvas.
+    let onBodyMouseMoveCallback = function(mouseEvent) {
+      drawBoard();
     };
 
     let onUndoMouseClickCallback = function(mouseEvent) {
@@ -485,6 +496,7 @@
       drawBoard,
       onCanvasMouseClickCallback,
       onCanvasMouseMoveCallback,
+      onBodyMouseMoveCallback,
       onUndoMouseClickCallback,
       onKeyDownCallback
     };
@@ -521,6 +533,10 @@
         (mouseEvent) => view.onCanvasMouseMoveCallback(mouseEvent));
       canvas.addEventListener(
         "click", (mouseEvent) => view.onCanvasMouseClickCallback(mouseEvent));
+
+      document.body.addEventListener(
+        "mousemove",
+        (mouseEvent) => view.onBodyMouseMoveCallback(mouseEvent));
 
       const undoButton = document.getElementById("undo_button");
       undoButton.addEventListener(
