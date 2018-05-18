@@ -115,7 +115,8 @@
       prisonersTakenBy: {black: 0, white: 0},
       grid,
       isLegalMove: getConstantMatrix({width, height}, true),
-      pastGrids: [JSON.stringify(grid)]
+      pastGrids: [JSON.stringify(grid)],
+      lastPlayCoords: null
     };
   };
 
@@ -220,6 +221,7 @@
         }
         state.turn = nextTurn;
         state.pastGrids.push(JSON.stringify(state.grid));
+        state.lastPlayCoords = {x, y};
         if (callPopulateLegalMoves) {
           populateLegalMoves();
           pastStates.push(JSON.stringify(state));
@@ -281,7 +283,7 @@
     // {row, col} are the coordinates of the board itself among the shadow
     // boards.
     let drawSingleStone = function(
-        {x, y}, {row, col}, {fillStyle, strokeStyle, alpha=1.0}) {
+        {x, y}, {row, col}, {fillStyle, strokeStyle, alpha=1.0, radius}) {
       let centerX = (x + 0.5)*sideLength + col*boardPixelWidth;
       let centerY = (y + 0.5)*sideLength + row*boardPixelHeight;
 
@@ -289,14 +291,24 @@
       context.fillStyle = fillStyle;
       context.strokeStyle = strokeStyle;
       context.globalAlpha = alpha;
-      context.arc(centerX, centerY, stoneRadius, 0, 2*Math.PI);
+      context.arc(centerX, centerY, radius, 0, 2*Math.PI);
       context.fill();
       context.stroke();
       context.globalAlpha = 1.0;
     };
 
     // {x, y} are the apparent coordinates of the stone in the center board.
-    let drawStoneAndShadows = function({x, y}, {color, alpha=1.0}) {
+    let drawStoneAndShadows = function(
+      {x, y},
+      {
+        fillStyle,
+        strokeStyle,
+        shadowFillStyle,
+        shadowStrokeStyle,
+        alpha=1.0,
+        radius=stoneRadius
+      }
+    ) {
       let centerCol = extendsX ? 1 : 0;
       let centerRow = extendsY ? 1 : 0;
 
@@ -304,7 +316,7 @@
       drawSingleStone(
         {x, y},
         {row: centerRow, col: centerCol},
-        {fillStyle: color, strokeStyle: "black", alpha});
+        {fillStyle: fillStyle, strokeStyle: strokeStyle, alpha, radius});
 
       // Draw the shadow stones.
       let colBound = extendsX ? 1 : 0;
@@ -319,9 +331,10 @@
               shadowCoords,
               {row: centerRow + row, col: centerCol + col},
               {
-                fillStyle: grayFill[color],
-                strokeStyle: grayStroke[color],
-                alpha
+                fillStyle: shadowFillStyle,
+                strokeStyle: shadowStrokeStyle,
+                alpha,
+                radius
               }
             );
           }
@@ -406,9 +419,37 @@
             let normalCoords =
               board.topology.normalizeCoords(
                 {x: x + offset.x, y: y + offset.y});
-            drawStoneAndShadows(normalCoords, {color});
+            drawStoneAndShadows(
+              normalCoords,
+              {
+                fillStyle: color,
+                strokeStyle: "black",
+                shadowFillStyle: grayFill[color],
+                shadowStrokeStyle: grayStroke[color]
+              });
           }
         }
+      }
+
+      // Last played stone dot.
+      if (board.state.lastPlayCoords) {
+        let normalCoords =
+          board.topology.normalizeCoords(
+            {
+              x: board.state.lastPlayCoords.x + offset.x,
+              y: board.state.lastPlayCoords.y + offset.y
+            }
+          );
+        drawStoneAndShadows(
+          normalCoords,
+          {
+            fillStyle: "red",
+            strokeStyle: "red",
+            shadowFillStyle: "red",
+            shadowStrokeStyle: "red",
+            radius: 0.3*stoneRadius
+          }
+        );
       }
 
       // Display prisoner count.
@@ -470,7 +511,13 @@
         if (board.state.isLegalMove[normalCoords.x][normalCoords.y]) {
           drawStoneAndShadows(
             {x: gridOffsetX, y: gridOffsetY},
-            {color: board.state.turn, alpha: 0.5});
+            {
+              fillStyle: board.state.turn,
+              strokeStyle: "black",
+              shadowFillStyle: grayFill[board.state.turn],
+              shadowStrokeStyle: grayStroke[board.state.turn],
+              alpha: 0.5
+            });
         }
       }
     };
