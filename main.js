@@ -271,17 +271,18 @@
     const stoneRadius = 0.5*sideLength;
     const boardPixelWidth = sideLength*board.size.x;
     const boardPixelHeight = sideLength*board.size.y;
-    let grayFill = {
+    const grayFill = {
       black: "#666666",
       white: "#f9f9f9"
     };
-    let grayStroke = {
+    const grayStroke = {
       black: "#666666",
       white: "#666666"
     };
-    let extendDirections = board.topology.getExtendDirections();
-    const extendsX = extendDirections.includes("x");
-    const extendsY = extendDirections.includes("y");
+    let [extendsX, extendsY] = (() => {
+      let extendDirections = board.topology.getExtendDirections();
+      return ["x", "y"].map((d) => extendDirections.includes(d));
+    })();
 
     canvas.setAttribute("width", (extendsX ? 3 : 1)*boardPixelWidth);
     canvas.setAttribute("height", (extendsY ? 3 : 1)*boardPixelHeight);
@@ -469,22 +470,27 @@
       whiteScoreSpan.innerHTML = board.state.prisonersTakenBy.white;
     };
 
+    let getGridOffsets = function(mouseEvent) {
+      let offsetCenterBoard = {
+        x: (extendsX ? 1 : 0)*boardPixelWidth,
+        y: (extendsY ? 1 : 0)*boardPixelHeight
+      };
+      return {
+        x: Math.floor((mouseEvent.offsetX - offsetCenterBoard.x)/sideLength),
+        y: Math.floor((mouseEvent.offsetY - offsetCenterBoard.y)/sideLength)
+      };
+    };
+
+    let isOnBoard = function({x, y}) {
+      return x >= 0 && x < board.size.x && y >= 0 && y < board.size.y;
+    };
+
     let onCanvasMouseClickCallback = function(mouseEvent) {
-      let xOffsetCenterBoard = (extendsX ? 1 : 0)*boardPixelWidth;
-      let yOffsetCenterBoard = (extendsY ? 1 : 0)*boardPixelHeight;
-
-      const gridOffsetX = (
-        Math.floor((mouseEvent.offsetX - xOffsetCenterBoard)/sideLength));
-      const gridOffsetY = (
-        Math.floor((mouseEvent.offsetY - yOffsetCenterBoard)/sideLength));
-
-      if (
-        gridOffsetX >= 0 && gridOffsetX < board.size.x &&
-        gridOffsetY >= 0 && gridOffsetY < board.size.y
-      ) {
+      let gridOffsets = getGridOffsets(mouseEvent);
+      if (isOnBoard(gridOffsets)) {
         let normalCoords =
           board.topology.normalizeCoords(
-            {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
+            {x: gridOffsets.x - offset.x, y: gridOffsets.y - offset.y});
         if (board.state.isLegalMove[normalCoords.x][normalCoords.y]) {
           board.play(normalCoords);
         }
@@ -501,24 +507,14 @@
 
       drawBoard();
 
-      let xOffsetCenterBoard = (extendsX ? 1 : 0)*boardPixelWidth;
-      let yOffsetCenterBoard = (extendsY ? 1 : 0)*boardPixelHeight;
-
-      const gridOffsetX = (
-        Math.floor((mouseEvent.offsetX - xOffsetCenterBoard)/sideLength));
-      const gridOffsetY = (
-        Math.floor((mouseEvent.offsetY - yOffsetCenterBoard)/sideLength));
-
-      if (
-        gridOffsetX >= 0 && gridOffsetX < board.size.x &&
-        gridOffsetY >= 0 && gridOffsetY < board.size.y
-      ) {
+      let gridOffsets = getGridOffsets(mouseEvent);
+      if (isOnBoard(gridOffsets)) {
         let normalCoords =
           board.topology.normalizeCoords(
-            {x: gridOffsetX - offset.x, y: gridOffsetY - offset.y});
+            {x: gridOffsets.x - offset.x, y: gridOffsets.y - offset.y});
         if (board.state.isLegalMove[normalCoords.x][normalCoords.y]) {
           drawStoneAndShadows(
-            {x: gridOffsetX, y: gridOffsetY},
+            {x: gridOffsets.x, y: gridOffsets.y},
             {
               fillStyle: board.state.turn,
               strokeStyle: "black",
