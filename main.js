@@ -37,7 +37,8 @@
     return {
       size,
       normalizeCoords,
-      getExtendDirections
+      getExtendDirections,
+      getScrollDirections: getExtendDirections
     };
   };
 
@@ -55,7 +56,8 @@
     return {
       size,
       normalizeCoords,
-      getExtendDirections
+      getExtendDirections,
+      getScrollDirections: getExtendDirections
     };
   };
 
@@ -81,7 +83,8 @@
     return {
       size,
       normalizeCoords,
-      getExtendDirections
+      getExtendDirections,
+      getScrollDirections: getExtendDirections
     };
   };
 
@@ -101,10 +104,15 @@
       return ["x", "y"];
     };
 
+    let getScrollDirections = function() {
+      return ["x"];
+    };
+
     return {
       size,
       normalizeCoords,
-      getExtendDirections
+      getExtendDirections,
+      getScrollDirections
     };
   };
 
@@ -545,7 +553,7 @@
     };
 
     let keyToDirectionMap = Object.create(null);
-    for (let direction of board.topology.getExtendDirections()) {
+    for (let direction of board.topology.getScrollDirections()) {
       for (let [key, dirs] of directionPairs[direction]) {
         keyToDirectionMap[key] = dirs;
       }
