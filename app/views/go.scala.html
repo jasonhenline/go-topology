@@ -1,13 +1,17 @@
+@(implicit assetsFinder: AssetsFinder)
+
 <html>
   <head>
     <title>
-      Go Topology
+      Go Around
     </title>
-    <script src=main.js></script>
+    <link rel="stylesheet" href="@assetsFinder.path("stylesheets/go.css")">
+    <script src="@assetsFinder.path("javascripts/go.js")"></script>
   </head>
-  <body style="font-family:Arial,Helvetica,sans-serif;">
+  <body>
+    <h1>Go Around</h1>
     <div id=setup>
-      <h1>Choose Game Parameters</h1>
+      <h2>Choose Game Parameters</h2>
       <table>
         <tr>
           <th colspan="2" align="left">
@@ -57,7 +61,7 @@
       <button id="start_game_button">Start Game</button>
       </p>
     </div>
-    <div id=play_screen style="display: none">
+    <div id=play_screen>
       <p>
       <table>
         <tr>
