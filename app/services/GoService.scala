@@ -81,6 +81,33 @@ case class Cylinder(override val width: Int, override val height: Int) extends T
   }
 }
 
+case class Torus(override val width: Int, override val height: Int) extends Topology(width = width, height = height) {
+  override def normalize(p: Point): Option[Point] = p match {
+    case Point(x, y) => Some(Point(x = mod(x, width), y = mod(y, height)))
+  }
+}
+
+case class MobiusStrip(override val width: Int, override val height: Int) extends Topology(width = width, height = height) {
+  override def normalize(p: Point): Option[Point] = p match {
+    case Point(x, y) =>
+      if (y < 0 || y >= height) None
+      else {
+        val fullX = mod(x, 2*width)
+        if (fullX < width) Some(Point(x = fullX, y = y))
+        else Some(Point(x = fullX - width, y = mod(height - 1 - y, height)))
+      }
+  }
+}
+
+case class KleinBottle(override val width: Int, override val height: Int) extends Topology(width = width, height = height) {
+  override def normalize(p: Point): Option[Point] = p match {
+    case Point(x, y) =>
+      val fullX = mod(x, 2*width)
+      if (fullX < width) Some(Point(x = fullX, y = y))
+      else Some(Point(x = fullX - width, y = height - 1 - y))
+  }
+}
+
 class GameState(width: Int, height: Int) {
   var grid = new Matrix[Option[Player.Value]](width = width, height = height, init = None)
   var isLegalMove = new Matrix[Boolean](width = width, height = height, init = true)
@@ -225,7 +252,7 @@ class GoBoard(val topology: Topology) {
 
   def undo(): Unit = {
     pastStates = pastStates match {
-      case currentState :: lastState :: rest =>
+      case _ :: lastState :: rest =>
         state = lastState
         lastState :: rest
       case _ => pastStates

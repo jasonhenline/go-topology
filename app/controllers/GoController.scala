@@ -7,6 +7,9 @@ import play.api.data.Forms._
 import play.api.libs.json
 import play.api.mvc._
 import service.Cylinder
+import service.Torus
+import service.MobiusStrip
+import service.KleinBottle
 import service.GoBoard
 import play.filters.csrf._
 import play.filters.csrf.CSRF.Token
@@ -61,7 +64,10 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
           else {
             val topologyInstance = topology match {
               case "cylinder" => new Cylinder(width = width, height = height)
-              // TODO: Fill in the other cases.
+              case "torus" => new Torus(width = width, height = height)
+              case "mobius" => new MobiusStrip(width = width, height = height)
+              case "klein" => new KleinBottle(width = width, height = height)
+              // TODO: Do something in the default case.
             }
             val blackId = java.util.UUID.randomUUID.toString
             val whiteId = java.util.UUID.randomUUID.toString
@@ -122,6 +128,9 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
       "topology" -> (
         board.topology match {
           case service.Cylinder(_, _) => "cylinder"
+          case service.Torus(_, _) => "torus"
+          case service.MobiusStrip(_, _) => "mobius"
+          case service.KleinBottle(_, _) => "klein"
           case _ => "unknown"
         }
       ),

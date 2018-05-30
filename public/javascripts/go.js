@@ -483,14 +483,15 @@
             document.getElementById("game_state").innerHTML
         )
 
+      let size = {width: gameState.size.x, height: gameState.size.y}
+
       let topology =
-        (gameState.topology === "cylinder") ? getCylinderTopology(
-            {
-                width: gameState.size.x,
-                height: gameState.size.y
-            }
-        ) : null;
-        // TODO: Put in other cases.
+        (gameState.topology === "cylinder") ? getCylinderTopology(size) :
+        (gameState.topology === "torus") ? getTorusTopology(size):
+        (gameState.topology === "mobius") ? getMobiusStripTopology(size):
+        (gameState.topology === "klein") ? getKleinBottleTopology(size):
+        null
+      // TODO: Better handling of the default case.
 
       let canvas = document.getElementById("play_area");
 
