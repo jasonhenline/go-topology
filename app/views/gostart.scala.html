@@ -20,7 +20,15 @@
     @helper.form(action = routes.GoController.createGame()) {
         @CSRF.formField
         @helper.inputText(createGameForm("name"))
-        @helper.inputText(createGameForm("topology"))
+        @helper.inputRadioGroup(
+            createGameForm("topology"),
+            options = Seq(
+                "cylinder" -> "Cylinder",
+                "torus" -> "Torus",
+                "mobius" -> "Mobius Strip",
+                "klein" -> "Klein Bottle"
+            )
+        )
         @helper.inputText(createGameForm("width"))
         @helper.inputText(createGameForm("height"))
         <input type="submit" value="Create Game">

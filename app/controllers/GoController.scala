@@ -6,11 +6,6 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json
 import play.api.mvc._
-import service.Cylinder
-import service.Torus
-import service.MobiusStrip
-import service.KleinBottle
-import service.GoBoard
 import play.filters.csrf._
 import play.filters.csrf.CSRF.Token
 
@@ -44,12 +39,9 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
   )
 
   // TODO: Protect shared state from concurrent access.
-  private val games = scala.collection.mutable.HashMap.empty[String, (GoBoard, String, String, Boolean)]
+  private val games = scala.collection.mutable.HashMap.empty[String, (service.GoBoard, String, String, Boolean)]
 
   def go = Action { implicit request =>
-    Logger.debug("Called the go Action")
-    val Token(name, value) = CSRF.getToken.get
-    Logger.debug("name = " + name + "value = " + value)
     Ok(views.html.gostart(createGameForm, joinGameForm))
   }
 
@@ -63,15 +55,15 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
           if (games.contains(name)) Forbidden("game with this name already exists")
           else {
             val topologyInstance = topology match {
-              case "cylinder" => new Cylinder(width = width, height = height)
-              case "torus" => new Torus(width = width, height = height)
-              case "mobius" => new MobiusStrip(width = width, height = height)
-              case "klein" => new KleinBottle(width = width, height = height)
+              case "cylinder" => new service.Cylinder(width = width, height = height)
+              case "torus" => new service.Torus(width = width, height = height)
+              case "mobius" => new service.MobiusStrip(width = width, height = height)
+              case "klein" => new service.KleinBottle(width = width, height = height)
               // TODO: Do something in the default case.
             }
             val blackId = java.util.UUID.randomUUID.toString
             val whiteId = java.util.UUID.randomUUID.toString
-            val board = new GoBoard(topologyInstance)
+            val board = new service.GoBoard(topologyInstance)
             games += (name -> (board, blackId, whiteId, false))
 
             // TODO: How should this URL be returned? Should this be a redirect?
@@ -101,7 +93,7 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
     )
   }
 
-  def toJson(board: GoBoard, id: String, csrfToken: CSRF.Token): json.JsObject = {
+  def toJson(board: service.GoBoard, id: String, csrfToken: CSRF.Token): json.JsObject = {
     json.Json.obj(
       "grid" -> json.Json.toJson(board.state.grid.contents),
       "isLegalMove" -> json.Json.toJson(board.state.isLegalMove.contents),
