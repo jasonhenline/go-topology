@@ -419,6 +419,13 @@
       if (player !== my.gameState.player) {
         return;
       }
+      let xhttp = new XMLHttpRequest();
+      xhttp.open("POST", "passmove/" + my.gameState.id, false);
+      xhttp.setRequestHeader("Csrf-Token", my.gameState.csrfToken);
+      // TODO: Handle error responses.
+      xhttp.send();
+      let newGameState = JSON.parse(xhttp.response);
+      my.gameState = newGameState;
       // TODO: Implement pass.
       drawBoard();
     };

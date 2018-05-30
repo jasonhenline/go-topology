@@ -23,6 +23,7 @@ POST    /go/joingame                controllers.GoController.joinGame
 GET     /go/game/:id                controllers.GoController.getGame(id)
 
 POST    /go/game/playmove/:id       controllers.GoController.playMove(id)
+POST    /go/game/passmove/:id       controllers.GoController.passMove(id)
 
 GET     /go/game/whosemove/:id      controllers.GoController.whoseMove(id)
 

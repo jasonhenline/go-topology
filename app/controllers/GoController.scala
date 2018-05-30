@@ -153,7 +153,6 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
 
   def playMove(id: String) = Action { implicit request =>
     // TODO: Check the format of the body.
-    Logger.info("request body is " + request.body.asText.get)
     val pointArray = request.body.asText.get.split(',').map(_.toInt)
     val idGameNames = for {
       game @ (name, (_, blackId, whiteId, _)) <- games
@@ -171,8 +170,33 @@ class GoController @Inject()(cc: ControllerComponents) (implicit assetsFinder: A
       if (!isActive) Forbidden("This game is not yet active")
       else if (id == blackId && board.state.player != service.Player.BLACK) Forbidden("It is white's turn")
       else if (id == whiteId && board.state.player != service.Player.WHITE) Forbidden("It is black's turn")
-      board.play(service.Point(x = pointArray(0), y = pointArray(1)))
-      Ok(toJson(board, id, CSRF.getToken.get))
+      else {
+        board.play(service.Point(x = pointArray(0), y = pointArray(1)))
+        Ok(toJson(board, id, CSRF.getToken.get))
+      }
+    }
+  }
+
+  def passMove(id: String) = Action { implicit request =>
+    val idGameNames = for {
+      game @ (name, (_, blackId, whiteId, _)) <- games
+      if blackId == id || whiteId == id
+    } yield name
+    if (idGameNames.isEmpty) Forbidden("No game with this ID exists.")
+    else {
+      val name = idGameNames.head
+      val game = games(name)
+      val board = game._1
+      val blackId = game._2
+      val whiteId = game._3
+      val isActive = game._4
+      if (!isActive) Forbidden("This game is not yet active")
+      else if (id == blackId && board.state.player != service.Player.BLACK) Forbidden("It is white's turn")
+      else if (id == whiteId && board.state.player != service.Player.WHITE) Forbidden("It is black's turn")
+      else {
+        board.pass()
+        Ok(toJson(board, id, CSRF.getToken.get))
+      }
     }
   }
 
