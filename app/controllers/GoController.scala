@@ -1,13 +1,11 @@
 package controllers
 
 import javax.inject._
-import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json
 import play.api.mvc._
 import play.filters.csrf._
-import play.filters.csrf.CSRF.Token
 
 // Class for the game creation form.
 case class CreateGameInfo(name: String, topology: String, width: Int, height: Int)

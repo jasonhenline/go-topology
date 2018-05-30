@@ -2,21 +2,8 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
-# An example controller showing how to use dependency injection
-GET     /count                      controllers.CountController.count
-# An example controller showing how to write asynchronous code
-GET     /message                    controllers.AsyncController.message
+GET     /                           controllers.GoController.go
 
-# Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(file)
-
-
-# My page
-GET     /go                         controllers.GoController.go
-
-# A game creation and join request
 POST    /go/creategame              controllers.GoController.createGame
 POST    /go/joingame                controllers.GoController.joinGame
 
@@ -26,5 +13,7 @@ POST    /go/game/playmove/:id       controllers.GoController.playMove(id)
 POST    /go/game/passmove/:id       controllers.GoController.passMove(id)
 
 GET     /go/game/whosemove/:id      controllers.GoController.whoseMove(id)
-
 GET     /go/game/getstate/:id       controllers.GoController.getState(id)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(file)
