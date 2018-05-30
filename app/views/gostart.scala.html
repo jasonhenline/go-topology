@@ -1,0 +1,40 @@
+@(createGameForm: Form[CreateGameInfo], joinGameForm: Form[JoinGameInfo])(
+    implicit assetsFinder: AssetsFinder,
+    request: RequestHeader,
+    messagesProvider: MessagesProvider)
+
+@import helper._
+
+<html>
+<head>
+    <title>
+        Go Around
+    </title>
+    <link rel="stylesheet" href="@assetsFinder.path("stylesheets/go.css")">
+  </head>
+  <body>
+    <h1>Go Around</h1>
+
+    <h2>Create Game</h2>
+    <p>
+    @helper.form(action = routes.GoController.createGame()) {
+        @CSRF.formField
+        @helper.inputText(createGameForm("name"))
+        @helper.inputText(createGameForm("topology"))
+        @helper.inputText(createGameForm("width"))
+        @helper.inputText(createGameForm("height"))
+        <input type="submit" value="Create Game">
+    }
+    </p>
+
+    <h2>Join Game</h2>
+    <p>
+    @helper.form(action = routes.GoController.joinGame()) {
+        @CSRF.formField
+        @helper.inputText(joinGameForm("name"))
+        <input type="submit" value="Join Game">
+    }
+    </p>
+
+  </body>
+</html>

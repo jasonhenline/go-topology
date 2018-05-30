@@ -15,3 +15,15 @@ GET     /assets/*file               controllers.Assets.versioned(file)
 
 # My page
 GET     /go                         controllers.GoController.go
+
+# A game creation and join request
+POST    /go/creategame              controllers.GoController.createGame
+POST    /go/joingame                controllers.GoController.joinGame
+
+GET     /go/game/:id                controllers.GoController.getGame(id)
+
+POST    /go/game/playmove/:id       controllers.GoController.playMove(id)
+
+GET     /go/game/whosemove/:id      controllers.GoController.whoseMove(id)
+
+GET     /go/game/getstate/:id       controllers.GoController.getState(id)

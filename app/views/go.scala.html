@@ -1,4 +1,4 @@
-@(implicit assetsFinder: AssetsFinder)
+@(name: String, player: String, gameState: String)(implicit assetsFinder: AssetsFinder)
 
 <html>
   <head>
@@ -10,57 +10,9 @@
   </head>
   <body>
     <h1>Go Around</h1>
-    <div id=setup>
-      <h2>Choose Game Parameters</h2>
-      <table>
-        <tr>
-          <th colspan="2" align="left">
-            Board Dimensions:
-          </th>
-        </tr>
-        <tr>
-          <td>Width:</td>
-          <td><input type="number" name="width" id="width_input" min="1" max="19" value="13"></td>
-        </tr>
-        <tr>
-          <td>Height:</td>
-          <td><input type="number" name="height" id="height_input" min="1" max="19" value="13"></td>
-        </tr>
-      </table>
-      </p>
-      <p>
-      <table>
-        <tr>
-          <th align="left">Topology:</th>
-        </tr>
-        <tr>
-          <td>
-            <table>
-              <tr><td>
-                  <input type="radio" name="topology" value="cylinder" id="radio_cylinder" checked>
-                  <label for="radio_cylinder">Cylinder</label>
-              </tr></td>
-              <tr><td>
-                  <input type="radio" name="topology" value="torus" id="radio_torus">
-                  <label for="radio_torus">Torus</label>
-              </tr></td>
-              <tr><td>
-                  <input type="radio" name="topology" value="mobius" id="radio_mobius">
-                  <label for="radio_mobius">Mobius Strip</label>
-              </tr></td>
-              <tr><td>
-                  <input type="radio" name="topology" value="klein" id="radio_klein">
-                  <label for="radio_klein">Klein Bottle</label>
-              </tr></td>
-            </table>
-          </td>
-        </tr>
-      </table>
-      </p>
-      <p>
-      <button id="start_game_button">Start Game</button>
-      </p>
-    </div>
+    <h2>Game Name: @name</h2>
+    <h2>You are: <span id="player">@player</span></h2>
+    <div id="game_state">@gameState</div>
     <div id=play_screen>
       <p>
       <table>

@@ -3,9 +3,9 @@ package service
 import org.scalatest._
 
 class GoServiceSpec extends FlatSpec with Matchers {
-  "A Board with a Cylinder Topology" should "identify capture on the edge" in {
+  "A GoBoard with a Cylinder Topology" should "identify capture on the edge" in {
     val cylinder = new Cylinder(width = 3, height = 3)
-    val board = new Board(cylinder)
+    val board = new GoBoard(cylinder)
     board.play(Point(0, 0))  // black
     board.play(Point(1, 0))  // white
     board.play(Point(2, 0))  // black
@@ -28,7 +28,7 @@ class GoServiceSpec extends FlatSpec with Matchers {
 
   it should "know the legal moves after a capture on the edge" in {
     val cylinder = new Cylinder(width = 3, height = 3)
-    val board = new Board(cylinder)
+    val board = new GoBoard(cylinder)
     board.play(Point(0, 0))  // black
     board.play(Point(1, 0))  // white
     board.play(Point(2, 0))  // black
@@ -48,7 +48,7 @@ class GoServiceSpec extends FlatSpec with Matchers {
 
   it should "be able to undo a capture on the edge" in {
     val cylinder = new Cylinder(width = 3, height = 3)
-    val board = new Board(cylinder)
+    val board = new GoBoard(cylinder)
     board.play(Point(0, 0))  // black
     board.play(Point(1, 0))  // white
     board.play(Point(2, 0))  // black
@@ -74,7 +74,7 @@ class GoServiceSpec extends FlatSpec with Matchers {
 
   it should "be able to identify a captured group in the middle" in {
     val cylinder = new Cylinder(width = 5, height = 5)
-    val board = new Board(cylinder)
+    val board = new GoBoard(cylinder)
     board.play(Point(2, 0))  // black
     board.play(Point(2, 1))  // white
     board.play(Point(2, 3))  // black

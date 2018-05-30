@@ -13,7 +13,8 @@ case class Point(x: Int, y: Int) {
 }
 
 class Matrix[A: ClassTag](val width: Int, val height: Int, init: A) {
-  private val contents: Array[Array[A]] = Array.fill[A](height, width)(init)
+  // TODO: Make this private. Public for now for ease of JSON conversion.
+  val contents: Array[Array[A]] = Array.fill[A](height, width)(init)
 
   def get(p: Point): A = p match {
     case Point(x, y) => contents(x)(y)
@@ -72,7 +73,7 @@ abstract class Topology(val width: Int, val height: Int) {
   def normalize(p: Point): Option[Point]
 }
 
-class Cylinder(width: Int, height: Int) extends Topology(width = width, height = height) {
+case class Cylinder(override val width: Int, override val height: Int) extends Topology(width = width, height = height) {
   override def normalize(p: Point): Option[Point] = p match {
     case Point(x, y) =>
       if (y < 0 || y >= height) None
@@ -89,7 +90,7 @@ class GameState(width: Int, height: Int) {
   var lastPlayPoint: Option[Point] = None
 }
 
-class Board(topology: Topology) {
+class GoBoard(val topology: Topology) {
   var state = new GameState(width = topology.width, height = topology.height)
   var pastStates = List(state)
 
@@ -160,7 +161,7 @@ class Board(topology: Topology) {
         // Illegal to play on top of an existing stone.
         case Some(_) => false
         case None =>
-          val boardCopy = new Board(topology)
+          val boardCopy = new GoBoard(topology)
           boardCopy.state.player = state.player
           for {
             x <- 0 until topology.width
