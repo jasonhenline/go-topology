@@ -321,6 +321,9 @@
       const whiteScoreSpan =
         document.getElementById("prisoners_taken_by_white");
       whiteScoreSpan.innerHTML = my.gameState.prisonersTakenBy.white;
+
+      // Display current player.
+      document.getElementById("current_player").innerHTML = my.gameState.player;
     };
 
     let getGridOffsets = function(mouseEvent) {
